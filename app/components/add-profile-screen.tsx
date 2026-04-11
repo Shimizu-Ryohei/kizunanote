@@ -36,7 +36,6 @@ export default function AddProfileScreen() {
   const [birthday, setBirthday] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
-  const [debugMessage, setDebugMessage] = useState("");
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
@@ -94,21 +93,16 @@ export default function AddProfileScreen() {
     return `${year}/${month}/${day}`;
   };
 
-  const handleRegisterClick = () => {
-    setDebugMessage("submit handled: modal open requested");
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsSavedModalOpen(true);
   };
 
   return (
     <MobileShell>
       <main className="relative px-5 pb-[168px]">
-        {debugMessage ? (
-          <div className="mb-3 rounded-lg bg-[#ff5f5f] px-4 py-3 text-[12px] font-bold text-white shadow-[0_10px_24px_rgba(255,95,95,0.28)]">
-            {debugMessage}
-          </div>
-        ) : null}
         <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
-          <form className="mt-1 space-y-8" noValidate>
+          <form className="mt-1 space-y-8" noValidate onSubmit={handleSubmit}>
             <section className="flex items-start gap-4">
               <button
                 type="button"
@@ -182,12 +176,8 @@ export default function AddProfileScreen() {
             </FieldLabel>
 
             <PrimaryCta
-              type="button"
+              type="submit"
               className="relative z-40 mt-10"
-              onClick={() => {
-                setDebugMessage("cta clicked");
-                handleRegisterClick();
-              }}
             >
               登録する
             </PrimaryCta>
