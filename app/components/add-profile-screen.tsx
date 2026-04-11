@@ -182,7 +182,11 @@ export default function AddProfileScreen() {
               />
             </FieldLabel>
 
-            <PrimaryCta type="submit" className="mt-10">
+            <PrimaryCta
+              type="submit"
+              className="mt-10"
+              onClick={() => setDebugMessage("cta clicked")}
+            >
               登録する
             </PrimaryCta>
           </form>
