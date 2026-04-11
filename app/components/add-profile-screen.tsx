@@ -10,7 +10,7 @@ import SuccessModal from "./success-modal";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-2 text-[11px] font-bold text-[#4b4b4b]">
+    <label className="flex flex-col gap-2 text-[14px] font-bold text-[#4b4b4b]">
       {children}
     </label>
   );
@@ -25,7 +25,7 @@ function TextInput({
     <input
       type="text"
       placeholder={placeholder}
-      className="h-[44px] w-full rounded-lg bg-white px-5 text-[15px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
+      className="h-[44px] w-full rounded-lg bg-white px-5 text-[14px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
     />
   );
 }
@@ -159,7 +159,7 @@ export default function AddProfileScreen() {
                 <input
                   type="text"
                   placeholder="YYYY/MM/DD"
-                  className="w-full bg-transparent text-[15px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
+                  className="w-full bg-transparent text-[14px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
                   inputMode="numeric"
                   value={birthday}
                   onChange={(event) => setBirthday(formatBirthday(event.target.value))}
@@ -171,7 +171,7 @@ export default function AddProfileScreen() {
               <span>キズナノート</span>
               <textarea
                 placeholder="出会いの経緯や趣味、家族情報など特記事項を記載してください..."
-                className="min-h-[156px] w-full resize-none rounded-lg bg-white px-5 py-5 text-[15px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
+                className="min-h-[156px] w-full resize-none rounded-lg bg-white px-5 py-5 text-[14px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
               />
             </FieldLabel>
 
