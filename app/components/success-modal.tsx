@@ -1,3 +1,8 @@
+"use client";
+
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+
 type SuccessModalProps = {
   buttonLabel?: string;
   message?: string;
@@ -9,8 +14,21 @@ export default function SuccessModal({
   message = "保存しました",
   onConfirm,
 }: SuccessModalProps) {
-  return (
-    <div className="fixed inset-0 z-40 bg-white/18">
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-white/18">
       <div className="mx-auto flex min-h-screen max-w-[430px] items-center justify-center px-7">
         <div className="w-full rounded-[24px] bg-white px-8 pb-7 pt-8 text-center shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
           <div className="mx-auto flex h-[70px] w-[70px] items-center justify-center rounded-full bg-[#dff2e9]">
@@ -36,6 +54,7 @@ export default function SuccessModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
