@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import MobileShell from "./mobile-shell";
 import { ChevronRightIcon, FilterIcon } from "./icons";
 
@@ -8,6 +9,7 @@ type CuratedLog = {
   company: string;
   role: string;
   group: string;
+  href?: string;
   avatar?: string;
   initials?: string;
   update?: boolean;
@@ -20,6 +22,7 @@ const curatedLogs: CuratedLog[] = [
     company: "株式会社モノ",
     role: "デザイナー",
     group: "さ",
+    href: "/profiles/kentaro-sato",
     avatar:
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=160&h=160&q=80",
     update: true,
@@ -68,7 +71,7 @@ function SearchBox() {
       <span className="sr-only">キュレーションログを検索</span>
       <input
         className="w-full bg-transparent text-[14px] text-black outline-none placeholder:text-[#8f8f8f]"
-        placeholder="Search curated logs..."
+        placeholder="キズナノートを検索する"
         type="search"
       />
     </label>
@@ -84,7 +87,7 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 function LogCard({ log }: { log: CuratedLog }) {
-  return (
+  const content = (
     <article className="flex min-h-[112px] items-center gap-7 rounded-lg bg-white px-7 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
       <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f0f0f0] text-[20px] font-bold text-[#c8c8c8]">
         {log.avatar ? (
@@ -122,6 +125,16 @@ function LogCard({ log }: { log: CuratedLog }) {
       <ChevronRightIcon className="h-5 w-5 shrink-0 text-[#9d9d9d]" />
     </article>
   );
+
+  if (log.href) {
+    return (
+      <Link href={log.href} className="block">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 export default function HomeScreen() {

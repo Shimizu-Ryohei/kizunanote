@@ -53,13 +53,13 @@ export function BottomMenu() {
         >
           <HomeIcon />
         </Link>
-        <button
-          type="button"
+        <Link
+          href="/profiles/new"
           aria-label="新規作成"
           className="justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full bg-black text-[26px] font-light leading-none text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
         >
           +
-        </button>
+        </Link>
         <Link
           href="#"
           aria-label="プロフィール"
