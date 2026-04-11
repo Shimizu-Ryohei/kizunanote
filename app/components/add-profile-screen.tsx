@@ -101,7 +101,7 @@ export default function AddProfileScreen() {
 
   return (
     <MobileShell>
-      <main className="relative px-5 pb-28">
+      <main className="relative px-5 pb-[168px]">
         {debugMessage ? (
           <div className="mb-3 rounded-lg bg-[#ff5f5f] px-4 py-3 text-[12px] font-bold text-white shadow-[0_10px_24px_rgba(255,95,95,0.28)]">
             {debugMessage}
@@ -183,7 +183,7 @@ export default function AddProfileScreen() {
 
             <PrimaryCta
               type="button"
-              className="mt-10"
+              className="relative z-40 mt-10"
               onClick={() => {
                 setDebugMessage("cta clicked");
                 handleRegisterClick();
