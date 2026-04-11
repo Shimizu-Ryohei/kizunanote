@@ -36,6 +36,7 @@ export default function AddProfileScreen() {
   const [birthday, setBirthday] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [debugMessage, setDebugMessage] = useState("");
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
@@ -95,12 +96,18 @@ export default function AddProfileScreen() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setDebugMessage("submit handled: modal open requested");
     setIsSavedModalOpen(true);
   };
 
   return (
     <MobileShell>
       <main className="relative px-5 pb-28">
+        {debugMessage ? (
+          <div className="mb-3 rounded-lg bg-[#ff5f5f] px-4 py-3 text-[12px] font-bold text-white shadow-[0_10px_24px_rgba(255,95,95,0.28)]">
+            {debugMessage}
+          </div>
+        ) : null}
         <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
           <form className="mt-1 space-y-8" onSubmit={handleSubmit}>
             <section className="flex items-start gap-4">
