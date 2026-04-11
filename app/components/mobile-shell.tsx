@@ -7,7 +7,7 @@ type MobileShellProps = {
 
 function HomeIcon() {
   return (
-    <svg aria-hidden="true" className="h-9 w-9" viewBox="0 0 24 24" fill="none">
+    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
       <path
         d="M4.75 10.5 12 4.75l7.25 5.75v8.75a1 1 0 0 1-1 1h-4.1v-5.4h-4.3v5.4h-4.1a1 1 0 0 1-1-1V10.5Z"
         stroke="currentColor"
@@ -20,7 +20,7 @@ function HomeIcon() {
 
 function UserIcon() {
   return (
-    <svg aria-hidden="true" className="h-9 w-9" viewBox="0 0 24 24" fill="none">
+    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
       <path
         d="M12 12.25a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM5.75 19.25c.65-2.6 2.95-4.15 6.25-4.15s5.6 1.55 6.25 4.15"
         stroke="currentColor"
@@ -77,7 +77,7 @@ export default function MobileShell({ children }: MobileShellProps) {
     <div className="min-h-screen bg-[#ececec] sm:bg-[#dedede]">
       <div className="mx-auto min-h-screen max-w-[430px] overflow-hidden bg-[#f7f7f7] shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
         <AppHeader />
-        <div className="pt-[54px]">{children}</div>
+        <div className="pt-[70px]">{children}</div>
         <BottomMenu />
       </div>
     </div>

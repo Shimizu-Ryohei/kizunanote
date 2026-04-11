@@ -63,7 +63,7 @@ const curatedLogs: CuratedLog[] = [
 
 function SearchBox() {
   return (
-    <label className="flex h-[62px] items-center gap-5 rounded-lg bg-white px-7 text-[#a6a6a6] shadow-[0_1px_0_rgba(0,0,0,0.01)]">
+    <label className="mt-2 flex h-[62px] items-center gap-5 rounded-lg bg-white px-7 text-[#a6a6a6] shadow-[0_1px_0_rgba(0,0,0,0.01)]">
       <FilterIcon className="h-5 w-5 shrink-0" />
       <span className="sr-only">キュレーションログを検索</span>
       <input
@@ -114,7 +114,7 @@ function LogCard({ log }: { log: CuratedLog }) {
           <span className="max-w-[104px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]">
             {log.company}
           </span>
-          <span className="truncate text-[10px] font-bold tracking-[0] text-[#454545]">
+          <span className="max-w-[104px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]">
             {log.role}
           </span>
         </div>
@@ -132,7 +132,7 @@ export default function HomeScreen() {
 
   return (
     <MobileShell>
-      <main className="px-7 pb-28 pt-2">
+      <main className="px-7 pb-28">
         <SearchBox />
         {Object.entries(groups).map(([group, logs]) => (
           <section key={group} aria-labelledby={`group-${group}`}>
