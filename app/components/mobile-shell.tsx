@@ -67,7 +67,7 @@ export function BottomMenu() {
         <Link
           href="/profiles/new"
           aria-label="新規作成"
-          className={`justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full text-[26px] font-light leading-none shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-colors ${
+          className={`justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full text-[26px] font-light leading-none transition-colors ${
             isNewProfileActive ? "bg-black text-white" : "bg-white text-black ring-1 ring-black"
           }`}
         >

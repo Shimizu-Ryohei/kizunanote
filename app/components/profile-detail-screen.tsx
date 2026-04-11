@@ -139,7 +139,10 @@ export default function ProfileDetailScreen() {
     <MobileShell>
       <main className="px-4 pb-28">
         <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
-          <ProfileHeader profile={kentaroSatoProfile} />
+          <ProfileHeader
+            profile={kentaroSatoProfile}
+            editHref="/profiles/kentaro-sato/edit-profile"
+          />
 
           <p className="mt-4 text-[14px] font-medium text-[#9f9f9f]">
             最終コンタクト: 2024年11月18日
@@ -155,12 +158,12 @@ export default function ProfileDetailScreen() {
                 </li>
               ))}
             </ul>
-            <button
-              type="button"
-              className="mt-4 ml-auto block text-[14px] font-medium text-[#a8a8a8] underline"
+            <Link
+              href="/profiles/kentaro-sato/notes"
+              className="mt-4 ml-auto block w-fit text-right text-[14px] font-medium text-[#a8a8a8] underline"
             >
               すべてのキズナノートを見る
-            </button>
+            </Link>
           </section>
 
           <section className="mt-6">
