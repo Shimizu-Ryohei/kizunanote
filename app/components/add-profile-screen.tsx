@@ -94,8 +94,7 @@ export default function AddProfileScreen() {
     return `${year}/${month}/${day}`;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleRegisterClick = () => {
     setDebugMessage("submit handled: modal open requested");
     setIsSavedModalOpen(true);
   };
@@ -109,7 +108,7 @@ export default function AddProfileScreen() {
           </div>
         ) : null}
         <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
-          <form className="mt-1 space-y-8" onSubmit={handleSubmit}>
+          <form className="mt-1 space-y-8" noValidate>
             <section className="flex items-start gap-4">
               <button
                 type="button"
@@ -183,9 +182,12 @@ export default function AddProfileScreen() {
             </FieldLabel>
 
             <PrimaryCta
-              type="submit"
+              type="button"
               className="mt-10"
-              onClick={() => setDebugMessage("cta clicked")}
+              onClick={() => {
+                setDebugMessage("cta clicked");
+                handleRegisterClick();
+              }}
             >
               登録する
             </PrimaryCta>
