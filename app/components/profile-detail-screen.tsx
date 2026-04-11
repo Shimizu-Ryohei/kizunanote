@@ -1,7 +1,14 @@
-import Image from "next/image";
+"use client";
+
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import MobileShell from "./mobile-shell";
 import PrimaryCta from "./primary-cta";
+import { kentaroSatoProfile } from "./profile-content";
+import ProfileHeader from "./profile-header";
+import SuccessModal from "./success-modal";
 
 const notes = [
   "Tech Conf 2025で登壇。AI駆動のウェブレイアウト設計について話したのが最初の接点。",
@@ -14,8 +21,10 @@ const notes = [
 const contacts = [
   { icon: <PhoneIcon />, label: "電話番号", value: "090-1234-5678" },
   { icon: <MailIcon />, label: "メールアドレス", value: "k.sato@studio.jp" },
-  { icon: <XIcon />, label: "X(TWITTER)", value: "@kento_sato" },
+  { icon: <XIcon />, label: "X", value: "@kento_sato" },
+  { icon: <FacebookIcon />, label: "FACEBOOK", value: "kento.sato.profile" },
   { icon: <InstagramIcon />, label: "INSTAGRAM", value: "kento.sato.profile" },
+  { icon: <LinkedInIcon />, label: "LINKEDIN", value: "linkedin.com/in/username" },
 ];
 
 function PhoneIcon() {
@@ -53,12 +62,21 @@ function MailIcon() {
 
 function XIcon() {
   return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 1200 1227" fill="none">
+      <path
+        d="M714.163 519.284 1160.89 0H1055.06L667.137 450.887 357.328 0H0l468.492 681.821L0 1226.37h105.832l409.649-476.152 327.191 476.152H1200L714.137 519.284h.026ZM569.154 687.828l-47.438-67.894L144.87 80.04h162.604l304.797 436.204 47.438 67.894 395.2 565.353H892.305L569.154 687.854v-.026Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
       <path
-        d="m6 5 12 14M18 5 6 19"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
+        d="M13.02 20v-6.93h2.33l.35-2.7h-2.68V8.39c0-.78.22-1.31 1.35-1.31h1.44V4.66c-.25-.03-1.1-.11-2.1-.11-2.08 0-3.5 1.26-3.5 3.57v2h-2.34v2.7h2.34V20h2.81Z"
+        fill="currentColor"
       />
     </svg>
   );
@@ -67,17 +85,21 @@ function XIcon() {
 function InstagramIcon() {
   return (
     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-      <rect
-        x="5.25"
-        y="5.25"
-        width="13.5"
-        height="13.5"
-        rx="4"
-        stroke="currentColor"
-        strokeWidth="1.7"
+      <path
+        d="M7.95 3h8.1A4.95 4.95 0 0 1 21 7.95v8.1A4.95 4.95 0 0 1 16.05 21h-8.1A4.95 4.95 0 0 1 3 16.05v-8.1A4.95 4.95 0 0 1 7.95 3Zm0 1.8A3.15 3.15 0 0 0 4.8 7.95v8.1a3.15 3.15 0 0 0 3.15 3.15h8.1a3.15 3.15 0 0 0 3.15-3.15v-8.1A3.15 3.15 0 0 0 16.05 4.8h-8.1Zm8.78 1.35a1.13 1.13 0 1 1 0 2.25 1.13 1.13 0 0 1 0-2.25ZM12 7.86A4.14 4.14 0 1 1 7.86 12 4.14 4.14 0 0 1 12 7.86Zm0 1.8A2.34 2.34 0 1 0 14.34 12 2.35 2.35 0 0 0 12 9.66Z"
+        fill="currentColor"
       />
-      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.7" />
-      <circle cx="16.4" cy="7.8" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+function LinkedInIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M6.39 8.18a1.61 1.61 0 1 1 0-3.21 1.61 1.61 0 0 1 0 3.21ZM7.78 10.01V19H5V10.01h2.78Zm4.35 0v1.23h.04c.39-.74 1.4-1.52 2.87-1.52 3.07 0 3.64 2.02 3.64 4.63V19H15.9v-3.33c0-.8-.01-1.81-1.11-1.81s-1.21.86-1.21 1.75V19h-2.79v-8.99h2.68Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
@@ -105,84 +127,72 @@ function ContactCard({
 }
 
 export default function ProfileDetailScreen() {
+  const router = useRouter();
+  const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+
+  const handleSavedConfirm = () => {
+    setIsSavedModalOpen(false);
+    router.replace("/profiles/kentaro-sato");
+  };
+
   return (
     <MobileShell>
       <main className="px-4 pb-28">
-        <section className="flex items-start gap-4">
-          <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ededed]">
-            <Image
-              alt="佐藤健太郎"
-              src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=160&h=160&q=80"
-              width={58}
-              height={58}
-              className="h-full w-full object-cover grayscale"
-            />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-[24px] font-black text-[#222]">佐藤 健太郎</h1>
-            <div className="mt-2 flex min-w-0 items-center gap-3">
-              <span className="max-w-[104px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]">
-                株式会社モノ
-              </span>
-              <span className="max-w-[104px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]">
-                デザイナー
-              </span>
-            </div>
-            <p className="mt-1 text-[14px] font-medium text-[#aeaeae]">
-              Birthday: 1992年11月20日
-            </p>
-          </div>
-        </section>
+        <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
+          <ProfileHeader profile={kentaroSatoProfile} />
 
-        <p className="mt-4 text-[14px] font-medium text-[#9f9f9f]">
-          最終コンタクト: 2024年11月18日
-        </p>
+          <p className="mt-4 text-[14px] font-medium text-[#9f9f9f]">
+            最終コンタクト: 2024年11月18日
+          </p>
 
-        <section className="mt-4 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
-          <h2 className="text-[14px] font-bold text-[#1f1f1f]">キズナノート要約</h2>
-          <ul className="mt-3 space-y-3 text-[14px] font-medium leading-6 text-[#333]">
-            {notes.map((note) => (
-              <li key={note} className="flex gap-2">
-                <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
-                <span>{note}</span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="mt-4 ml-auto block text-[14px] font-medium text-[#a8a8a8] underline"
-          >
-            すべてのキズナノートを見る
-          </button>
-        </section>
-
-        <section className="mt-6">
-          <h2 className="text-[14px] font-bold text-[#4b4b4b]">キズナノート</h2>
-          <textarea
-            placeholder="現在の内容、前回や前後など、このヒトの情報を、なんでもよいので入力してください。"
-            className="mt-3 min-h-[140px] w-full resize-none rounded-lg bg-white px-4 py-4 text-[14px] font-medium text-black outline-none placeholder:text-[#c0c0c0]"
-          />
-          <PrimaryCta className="mt-6">
-            保存する
-          </PrimaryCta>
-        </section>
-
-        <section className="mt-7">
-          <h2 className="text-[14px] font-bold text-[#4b4b4b]">連絡先情報</h2>
-          <div className="mt-3 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
-            <div className="mt-4 space-y-3">
-              {contacts.map((contact) => (
-                <ContactCard key={contact.label} {...contact} />
+          <section className="mt-4 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
+            <h2 className="text-[14px] font-bold text-[#1f1f1f]">キズナノート要約</h2>
+            <ul className="mt-3 space-y-3 text-[14px] font-medium leading-6 text-[#333]">
+              {notes.map((note) => (
+                <li key={note} className="flex gap-2">
+                  <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
+                  <span>{note}</span>
+                </li>
               ))}
-            </div>
+            </ul>
             <button
               type="button"
-              className="mx-auto mt-5 block text-[14px] font-medium text-[#8d8d8d]"
+              className="mt-4 ml-auto block text-[14px] font-medium text-[#a8a8a8] underline"
             >
-              編集する
+              すべてのキズナノートを見る
             </button>
-          </div>
-        </section>
+          </section>
+
+          <section className="mt-6">
+            <h2 className="text-[14px] font-bold text-[#4b4b4b]">キズナノート</h2>
+            <textarea
+              placeholder="現在の内容、前回や前後など、このヒトの情報を、なんでもよいので入力してください。"
+              className="mt-3 min-h-[140px] w-full resize-none rounded-lg bg-white px-4 py-4 text-[14px] font-medium text-black outline-none placeholder:text-[#c0c0c0]"
+            />
+            <PrimaryCta className="mt-6" onClick={() => setIsSavedModalOpen(true)}>
+              保存する
+            </PrimaryCta>
+          </section>
+
+          <section className="mt-7">
+            <h2 className="text-[14px] font-bold text-[#4b4b4b]">連絡先情報</h2>
+            <div className="mt-3 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
+              <div className="mt-4 space-y-3">
+                {contacts.map((contact) => (
+                  <ContactCard key={contact.label} {...contact} />
+                ))}
+              </div>
+              <Link
+                href="/profiles/kentaro-sato/contact-info"
+                className="mx-auto mt-5 block w-fit text-center text-[14px] font-medium text-[#8d8d8d]"
+              >
+                編集する
+              </Link>
+            </div>
+          </section>
+        </div>
+
+        {isSavedModalOpen ? <SuccessModal onConfirm={handleSavedConfirm} /> : null}
       </main>
     </MobileShell>
   );

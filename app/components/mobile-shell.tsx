@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type MobileShellProps = {
   children: ReactNode;
@@ -34,12 +37,18 @@ function UserIcon() {
 export function AppHeader() {
   return (
     <header className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[430px] bg-white/95 px-7 pb-3 pt-5 backdrop-blur">
-      <h1 className="text-[22px] font-black tracking-[0] text-black">キズナノート</h1>
+      <Link href="/home" className="inline-block text-[22px] font-black tracking-[0] text-black">
+        キズナノート
+      </Link>
     </header>
   );
 }
 
 export function BottomMenu() {
+  const pathname = usePathname();
+  const isHomeActive = pathname === "/home";
+  const isNewProfileActive = pathname === "/profiles/new";
+
   return (
     <nav
       aria-label="メインメニュー"
@@ -49,24 +58,28 @@ export function BottomMenu() {
         <Link
           href="/home"
           aria-label="ホーム"
-          className="flex h-10 items-center justify-center text-[#b8b8b8]"
+          className={`justify-self-center flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+            isHomeActive ? "bg-black text-white" : "text-[#b8b8b8]"
+          }`}
         >
           <HomeIcon />
         </Link>
         <Link
           href="/profiles/new"
           aria-label="新規作成"
-          className="justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full bg-black text-[26px] font-light leading-none text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
+          className={`justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full text-[26px] font-light leading-none shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-colors ${
+            isNewProfileActive ? "bg-black text-white" : "bg-white text-black ring-1 ring-black"
+          }`}
         >
           +
         </Link>
-        <Link
-          href="#"
+        <button
+          type="button"
           aria-label="プロフィール"
-          className="flex h-10 items-center justify-center text-[#b8b8b8]"
+          className="justify-self-center flex h-10 w-10 items-center justify-center rounded-full text-[#b8b8b8] transition-colors"
         >
           <UserIcon />
-        </Link>
+        </button>
       </div>
     </nav>
   );
