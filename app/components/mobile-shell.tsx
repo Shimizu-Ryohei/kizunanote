@@ -21,15 +21,17 @@ function HomeIcon() {
   );
 }
 
-function UserIcon() {
+function SettingsIcon() {
   return (
     <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
       <path
-        d="M12 12.25a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM5.75 19.25c.65-2.6 2.95-4.15 6.25-4.15s5.6 1.55 6.25 4.15"
+        d="M9.86 4.6c.1-.38.44-.64.84-.64h2.6c.4 0 .74.26.84.64l.39 1.45c.46.19.88.43 1.28.74l1.43-.42c.38-.11.78.04 1 .38l1.3 2.25c.2.35.14.79-.14 1.06l-1.05 1.05c.03.23.05.46.05.7s-.02.47-.05.7l1.05 1.05c.28.27.34.71.14 1.06l-1.3 2.25c-.22.34-.62.49-1 .38l-1.43-.42c-.4.31-.82.55-1.28.74l-.39 1.45c-.1.38-.44.64-.84.64h-2.6a.87.87 0 0 1-.84-.64l-.39-1.45a6.27 6.27 0 0 1-1.28-.74l-1.43.42c-.38.11-.78-.04-1-.38l-1.3-2.25a.9.9 0 0 1 .14-1.06l1.05-1.05A5.76 5.76 0 0 1 5.8 12c0-.24.02-.47.05-.7L4.8 10.25a.9.9 0 0 1-.14-1.06l1.3-2.25c.22-.34.62-.49 1-.38l1.43.42c.4-.31.82-.55 1.28-.74l.39-1.45Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -47,7 +49,7 @@ export function AppHeader() {
 export function BottomMenu() {
   const pathname = usePathname();
   const isHomeActive = pathname === "/home";
-  const isNewProfileActive = pathname === "/profiles/new";
+  const isSettingsActive = pathname === "/settings";
 
   return (
     <nav
@@ -67,19 +69,19 @@ export function BottomMenu() {
         <Link
           href="/profiles/new"
           aria-label="新規作成"
-          className={`justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full text-[26px] font-light leading-none transition-colors ${
-            isNewProfileActive ? "bg-black text-white" : "bg-white text-black ring-1 ring-black"
-          }`}
+          className="justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[var(--color-main)] text-[26px] font-light leading-none text-white transition-colors"
         >
           +
         </Link>
-        <button
-          type="button"
+        <Link
+          href="/settings"
           aria-label="プロフィール"
-          className="justify-self-center flex h-10 w-10 items-center justify-center rounded-full text-[#b8b8b8] transition-colors"
+          className={`justify-self-center flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+            isSettingsActive ? "bg-black text-white" : "text-[#b8b8b8]"
+          }`}
         >
-          <UserIcon />
-        </button>
+          <SettingsIcon />
+        </Link>
       </div>
     </nav>
   );

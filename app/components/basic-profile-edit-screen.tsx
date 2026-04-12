@@ -146,12 +146,12 @@ export default function BasicProfileEditScreen() {
                   <TextInput defaultValue="健太郎" />
                 </FieldLabel>
                 <FieldLabel>
-                  <span>所属</span>
-                  <TextInput defaultValue="株式会社モノ" />
+                  <span>せい</span>
+                  <TextInput defaultValue="さとう" />
                 </FieldLabel>
                 <FieldLabel>
-                  <span>役職</span>
-                  <TextInput defaultValue="デザイナー" />
+                  <span>めい</span>
+                  <TextInput defaultValue="けんたろう" />
                 </FieldLabel>
               </div>
             </section>

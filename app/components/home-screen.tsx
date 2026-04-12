@@ -114,10 +114,10 @@ function LogCard({ log }: { log: CuratedLog }) {
           ) : null}
         </div>
         <div className="mt-2 flex min-w-0 items-center gap-3">
-          <span className="max-w-[104px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]">
+          <span className="max-w-[104px] truncate rounded-full bg-[var(--color-sub)] px-3 py-1 text-[9px] font-black tracking-[0] text-[var(--color-main)]">
             {log.company}
           </span>
-          <span className="max-w-[104px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]">
+          <span className="max-w-[104px] truncate rounded-full bg-[var(--color-sub)] px-3 py-1 text-[9px] font-black tracking-[0] text-[var(--color-main)]">
             {log.role}
           </span>
         </div>

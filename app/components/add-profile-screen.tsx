@@ -143,11 +143,15 @@ export default function AddProfileScreen() {
                   <TextInput placeholder="太郎" />
                 </FieldLabel>
                 <FieldLabel>
-                  <span>せい（ふりがな）</span>
+                  <span>
+                    せい <span className="text-[#6c6c6c]">（必須）</span>
+                  </span>
                   <TextInput placeholder="やまだ" />
                 </FieldLabel>
                 <FieldLabel>
-                  <span>めい（ふりがな）</span>
+                  <span>
+                    めい <span className="text-[#6c6c6c]">（必須）</span>
+                  </span>
                   <TextInput placeholder="たろう" />
                 </FieldLabel>
               </div>
@@ -168,7 +172,7 @@ export default function AddProfileScreen() {
             </FieldLabel>
 
             <FieldLabel>
-              <span>キズナノート</span>
+              <span>キズナノートを書く</span>
               <textarea
                 placeholder="出会いの経緯や趣味、家族情報など特記事項を記載してください..."
                 className="min-h-[156px] w-full resize-none rounded-lg bg-white px-5 py-5 text-[16px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"

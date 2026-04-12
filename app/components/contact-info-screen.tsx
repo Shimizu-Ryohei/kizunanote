@@ -15,7 +15,6 @@ type ContactFieldCardProps = {
 };
 
 type SocialCardProps = {
-  label: string;
   value: string;
   icon: React.ReactNode;
 };
@@ -24,23 +23,22 @@ function ContactFieldCard({ label, value, icon }: ContactFieldCardProps) {
   return (
     <label className="block">
       <span className="text-[14px] font-bold text-[#5f5f5f]">{label}</span>
-      <div className="mt-3 flex min-h-[80px] items-center justify-between rounded-[18px] bg-[#f3f3f3] px-5 py-4">
+      <div className="mt-3 flex min-h-[80px] items-center gap-4 rounded-[18px] bg-[#f3f3f3] px-5 py-4">
+        <span className="shrink-0 text-[#bdbdbd]">{icon}</span>
         <input
           type="text"
           defaultValue={value}
           className="w-full bg-transparent text-[16px] font-medium text-[#2a2a2a] outline-none"
         />
-        <span className="ml-4 shrink-0 text-[#bdbdbd]">{icon}</span>
       </div>
     </label>
   );
 }
 
-function SocialCard({ label, value, icon }: SocialCardProps) {
+function SocialCard({ value, icon }: SocialCardProps) {
   return (
     <label className="block rounded-[18px] bg-[#f3f3f3] px-5 py-5">
-      <span className="text-[13px] font-bold tracking-[0.02em] text-[#6a6a6a]">{label}</span>
-      <div className="mt-5 flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <span className="shrink-0 text-black">{icon}</span>
         <input
           type="text"
@@ -56,9 +54,9 @@ function PhoneGlyph() {
   return (
     <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
       <path
-        d="M7.8 4.75h2.1c.35 0 .66.24.75.57l.7 2.6a.76.76 0 0 1-.22.75l-1.3 1.24a12.5 12.5 0 0 0 4.56 4.56l1.24-1.3a.76.76 0 0 1 .75-.22l2.6.7c.33.09.57.4.57.75v2.1c0 .41-.33.75-.75.75C11.62 19.75 4.25 12.38 4.25 5.5c0-.42.33-.75.75-.75Z"
+        d="M6.66 5.25h2.56c.28 0 .54.19.61.46l.67 2.47a.63.63 0 0 1-.18.62l-1.22 1.16a11.65 11.65 0 0 0 4.93 4.93l1.16-1.22a.63.63 0 0 1 .62-.18l2.47.67c.27.07.46.33.46.61v2.56c0 .35-.28.63-.63.63C11.59 18.14 5.88 12.43 5.88 5.88c0-.35.28-.63.63-.63Z"
         stroke="currentColor"
-        strokeWidth="1.7"
+        strokeWidth="1.6"
         strokeLinejoin="round"
       />
     </svg>
@@ -152,14 +150,10 @@ export default function ContactInfoScreen() {
           <section className="mt-9">
             <h2 className="text-[14px] font-bold text-[#5f5f5f]">SNS</h2>
             <div className="mt-5 space-y-6">
-              <SocialCard label="X" value="@kento_sato" icon={<XGlyph />} />
-              <SocialCard label="FACEBOOK" value="kento.sato.profile" icon={<FacebookGlyph />} />
-              <SocialCard label="INSTAGRAM" value="@username" icon={<InstagramGlyph />} />
-              <SocialCard
-                label="LINKEDIN"
-                value="linkedin.com/in/username"
-                icon={<LinkedInGlyph />}
-              />
+              <SocialCard value="@kento_sato" icon={<XGlyph />} />
+              <SocialCard value="kento.sato.profile" icon={<FacebookGlyph />} />
+              <SocialCard value="@username" icon={<InstagramGlyph />} />
+              <SocialCard value="linkedin.com/in/username" icon={<LinkedInGlyph />} />
             </div>
           </section>
 

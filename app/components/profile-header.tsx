@@ -42,7 +42,7 @@ export default function ProfileHeader({
           {profile.tags.map((tag) => (
             <span
               key={tag.id}
-              className="max-w-[112px] truncate rounded-full bg-[#d8d8d8] px-3 py-1 text-[9px] font-black tracking-[0] text-[#777]"
+              className="max-w-[112px] truncate rounded-full bg-[var(--color-sub)] px-3 py-1 text-[9px] font-black tracking-[0] text-[var(--color-main)]"
             >
               {tag.label}
             </span>

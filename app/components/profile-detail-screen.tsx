@@ -31,9 +31,9 @@ function PhoneIcon() {
   return (
     <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
       <path
-        d="M7.8 4.75h2.1c.35 0 .66.24.75.57l.7 2.6a.76.76 0 0 1-.22.75l-1.3 1.24a12.5 12.5 0 0 0 4.56 4.56l1.24-1.3a.76.76 0 0 1 .75-.22l2.6.7c.33.09.57.4.57.75v2.1c0 .41-.33.75-.75.75C11.62 19.75 4.25 12.38 4.25 5.5c0-.42.33-.75.75-.75Z"
+        d="M6.66 5.25h2.56c.28 0 .54.19.61.46l.67 2.47a.63.63 0 0 1-.18.62l-1.22 1.16a11.65 11.65 0 0 0 4.93 4.93l1.16-1.22a.63.63 0 0 1 .62-.18l2.47.67c.27.07.46.33.46.61v2.56c0 .35-.28.63-.63.63C11.59 18.14 5.88 12.43 5.88 5.88c0-.35.28-.63.63-.63Z"
         stroke="currentColor"
-        strokeWidth="1.7"
+        strokeWidth="1.6"
         strokeLinejoin="round"
       />
     </svg>
@@ -104,13 +104,22 @@ function LinkedInIcon() {
   );
 }
 
+function SparklesIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4 text-[var(--color-main)]" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3.75 13.64 8.36 18.25 10 13.64 11.64 12 16.25 10.36 11.64 5.75 10l4.61-1.64L12 3.75ZM18 15l.82 2.18L21 18l-2.18.82L18 21l-.82-2.18L15 18l2.18-.82L18 15ZM6 15l.82 2.18L9 18l-2.18.82L6 21l-.82-2.18L3 18l2.18-.82L6 15Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function ContactCard({
   icon,
-  label,
   value,
 }: {
   icon: ReactNode;
-  label: string;
   value: string;
 }) {
   return (
@@ -118,10 +127,7 @@ function ContactCard({
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f2f2f2] text-[#444]">
         {icon}
       </div>
-      <div className="min-w-0">
-        <p className="text-[14px] font-bold text-[#9d9d9d]">{label}</p>
-        <p className="truncate text-[14px] font-bold text-[#2a2a2a]">{value}</p>
-      </div>
+      <p className="truncate text-[14px] font-bold text-[#2a2a2a]">{value}</p>
     </div>
   );
 }
@@ -149,11 +155,14 @@ export default function ProfileDetailScreen() {
           </p>
 
           <section className="mt-4 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
-            <h2 className="text-[14px] font-bold text-[#1f1f1f]">キズナノート要約</h2>
+            <h2 className="flex items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
+              <SparklesIcon />
+              <span>キズナノート要約</span>
+            </h2>
             <ul className="mt-3 space-y-3 text-[14px] font-medium leading-6 text-[#333]">
               {notes.map((note) => (
-                <li key={note} className="flex gap-2">
-                  <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
+                <li key={note} className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
                   <span>{note}</span>
                 </li>
               ))}
@@ -167,7 +176,7 @@ export default function ProfileDetailScreen() {
           </section>
 
           <section className="mt-6">
-            <h2 className="text-[14px] font-bold text-[#4b4b4b]">キズナノート</h2>
+            <h2 className="text-[14px] font-bold text-[#4b4b4b]">キズナノートを書く</h2>
             <textarea
               placeholder="現在の内容、前回や前後など、このヒトの情報を、なんでもよいので入力してください。"
               className="mt-3 min-h-[140px] w-full resize-none rounded-lg bg-white px-4 py-4 text-[14px] font-medium text-black outline-none placeholder:text-[#c0c0c0]"

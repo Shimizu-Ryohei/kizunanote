@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Firebase Setup
+
+1. Create a Firebase project and add a Web App in the Firebase console.
+2. Copy `.env.local.example` to `.env.local`.
+3. Fill in the `NEXT_PUBLIC_FIREBASE_*` values from your Firebase Web App config.
+4. Use [`lib/firebase/client.ts`](/Users/ryoheishimizu/kizunanote/lib/firebase/client.ts) to access:
+   - `firebaseAuth`
+   - `firestore`
+   - `storage`
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
