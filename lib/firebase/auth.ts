@@ -4,9 +4,18 @@ import {
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { firebaseAuth, firestore } from "./client";
+import { firebaseAuth, firestore, getFirebaseConfigError } from "./client";
+
+function ensureFirebaseAuth() {
+  if (!firebaseAuth || !firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  return { firebaseAuth, firestore };
+}
 
 export async function signUpWithEmail(email: string, password: string) {
+  const { firebaseAuth, firestore } = ensureFirebaseAuth();
   const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
   const user = credential.user;
 
@@ -27,9 +36,11 @@ export async function signUpWithEmail(email: string, password: string) {
 }
 
 export async function signInWithEmail(email: string, password: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
   return signInWithEmailAndPassword(firebaseAuth, email, password);
 }
 
 export async function signOut() {
+  const { firebaseAuth } = ensureFirebaseAuth();
   return firebaseSignOut(firebaseAuth);
 }

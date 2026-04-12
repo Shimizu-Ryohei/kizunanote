@@ -13,21 +13,20 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-function validateFirebaseConfig() {
-  const missingKeys = Object.entries(firebaseConfig)
-    .filter(([, value]) => !value)
-    .map(([key]) => key);
+const missingKeys = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
 
-  if (missingKeys.length > 0) {
-    throw new Error(
-      `Missing Firebase env vars: ${missingKeys.join(", ")}. Copy .env.local.example to .env.local and fill in your Firebase Web App config.`,
-    );
-  }
+export const hasFirebaseConfig = missingKeys.length === 0;
+
+export function getFirebaseConfigError() {
+  return `Missing Firebase env vars: ${missingKeys.join(", ")}. Copy .env.local.example to .env.local and fill in your Firebase Web App config.`;
 }
 
-validateFirebaseConfig();
+export const firebaseApp = hasFirebaseConfig
+  ? getApps()[0] ?? initializeApp(firebaseConfig)
+  : null;
 
-export const firebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
-export const firebaseAuth = getAuth(firebaseApp);
-export const firestore = getFirestore(firebaseApp);
-export const storage = getStorage(firebaseApp);
+export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
+export const firestore = firebaseApp ? getFirestore(firebaseApp) : null;
+export const storage = firebaseApp ? getStorage(firebaseApp) : null;

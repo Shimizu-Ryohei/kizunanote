@@ -24,9 +24,13 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(Boolean(firebaseAuth));
 
   useEffect(() => {
+    if (!firebaseAuth) {
+      return;
+    }
+
     setPersistence(firebaseAuth, browserLocalPersistence).catch(() => {
       // Fallback to the default persistence if browser storage is unavailable.
     });
