@@ -3,10 +3,13 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "./auth-provider";
 import MobileShell from "./mobile-shell";
 import { CameraPlusIcon } from "./icons";
 import PrimaryCta from "./primary-cta";
 import SuccessModal from "./success-modal";
+import { createProfile } from "@/lib/firebase/profiles";
+import { compressImage } from "@/lib/image/compress-image";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -17,13 +20,19 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 function TextInput({
+  value,
+  onChange,
   placeholder,
 }: {
+  value: string;
+  onChange: (value: string) => void;
   placeholder: string;
 }) {
   return (
     <input
       type="text"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       className="h-[44px] w-full rounded-lg bg-white px-5 text-[16px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
     />
@@ -32,10 +41,19 @@ function TextInput({
 
 export default function AddProfileScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastNameKana, setLastNameKana] = useState("");
+  const [firstNameKana, setFirstNameKana] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [noteBody, setNoteBody] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
@@ -46,10 +64,10 @@ export default function AddProfileScreen() {
     };
   }, [photoPreview]);
 
-  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
 
-    if (!file) {
+    if (!selectedFile) {
       return;
     }
 
@@ -57,7 +75,15 @@ export default function AddProfileScreen() {
       URL.revokeObjectURL(photoPreview);
     }
 
-    setPhotoPreview(URL.createObjectURL(file));
+    try {
+      const compressedFile = await compressImage(selectedFile);
+      setPhotoFile(compressedFile);
+      setPhotoPreview(URL.createObjectURL(compressedFile));
+    } catch (error) {
+      console.error(error);
+      setPhotoFile(selectedFile);
+      setPhotoPreview(URL.createObjectURL(selectedFile));
+    }
   };
 
   const formatBirthday = (value: string) => {
@@ -93,9 +119,40 @@ export default function AddProfileScreen() {
     return `${year}/${month}/${day}`;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSavedModalOpen(true);
+    setErrorMessage("");
+
+    if (!user) {
+      setErrorMessage("ログイン状態を確認できませんでした。再度ログインしてください。");
+      return;
+    }
+
+    if (!lastName || !firstName || !lastNameKana || !firstNameKana) {
+      setErrorMessage("必須項目を入力してください。");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      await createProfile({
+        lastName: lastName.trim(),
+        firstName: firstName.trim(),
+        lastNameKana: lastNameKana.trim(),
+        firstNameKana: firstNameKana.trim(),
+        birthday,
+        noteBody,
+        photoFile,
+      });
+
+      setIsSavedModalOpen(true);
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("プロフィールの保存に失敗しました。時間を置いて再度お試しください。");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -134,25 +191,25 @@ export default function AddProfileScreen() {
                   <span>
                     姓 <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="山田" />
+                  <TextInput placeholder="山田" value={lastName} onChange={setLastName} />
                 </FieldLabel>
                 <FieldLabel>
                   <span>
                     名 <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="太郎" />
+                  <TextInput placeholder="太郎" value={firstName} onChange={setFirstName} />
                 </FieldLabel>
                 <FieldLabel>
                   <span>
                     せい <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="やまだ" />
+                  <TextInput placeholder="やまだ" value={lastNameKana} onChange={setLastNameKana} />
                 </FieldLabel>
                 <FieldLabel>
                   <span>
                     めい <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="たろう" />
+                  <TextInput placeholder="たろう" value={firstNameKana} onChange={setFirstNameKana} />
                 </FieldLabel>
               </div>
             </section>
@@ -174,16 +231,23 @@ export default function AddProfileScreen() {
             <FieldLabel>
               <span>キズナノートを書く</span>
               <textarea
+                value={noteBody}
+                onChange={(event) => setNoteBody(event.target.value)}
                 placeholder="出会いの経緯や趣味、家族情報など特記事項を記載してください..."
                 className="min-h-[156px] w-full resize-none rounded-lg bg-white px-5 py-5 text-[16px] font-medium text-black outline-none placeholder:text-[#b0b0b0]"
               />
             </FieldLabel>
 
+            {errorMessage ? (
+              <p className="text-[13px] font-medium text-[#d64253]">{errorMessage}</p>
+            ) : null}
+
             <PrimaryCta
               type="submit"
-              className="relative z-40 mt-10"
+              disabled={isSubmitting}
+              className={`relative z-40 mt-10 ${isSubmitting ? "opacity-70" : ""}`}
             >
-              登録する
+              {isSubmitting ? "保存中..." : "登録する"}
             </PrimaryCta>
           </form>
         </div>

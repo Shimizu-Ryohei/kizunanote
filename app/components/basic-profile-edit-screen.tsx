@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import MobileShell from "./mobile-shell";
 import PrimaryCta from "./primary-cta";
 import SuccessModal from "./success-modal";
+import { compressImage } from "@/lib/image/compress-image";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -45,10 +46,10 @@ export default function BasicProfileEditScreen() {
     };
   }, [photoPreview]);
 
-  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
 
-    if (!file) {
+    if (!selectedFile) {
       return;
     }
 
@@ -56,7 +57,13 @@ export default function BasicProfileEditScreen() {
       URL.revokeObjectURL(photoPreview);
     }
 
-    setPhotoPreview(URL.createObjectURL(file));
+    try {
+      const compressedFile = await compressImage(selectedFile);
+      setPhotoPreview(URL.createObjectURL(compressedFile));
+    } catch (error) {
+      console.error(error);
+      setPhotoPreview(URL.createObjectURL(selectedFile));
+    }
   };
 
   const formatBirthday = (value: string) => {
