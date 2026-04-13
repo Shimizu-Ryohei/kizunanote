@@ -335,7 +335,12 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                 {contactItems.length ? (
                   <div className="space-y-3">
                     {contactItems.map((contact) => (
-                      <ContactCard key={contact.key} icon={contact.icon} value={contact.value} />
+                      <ContactCard
+                        key={contact.key}
+                        icon={contact.icon}
+                        value={contact.value}
+                        href={contact.href}
+                      />
                     ))}
                   </div>
                 ) : (
