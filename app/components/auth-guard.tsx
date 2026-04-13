@@ -5,7 +5,10 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./auth-provider";
 
 const PUBLIC_PATH_PREFIXES = ["/sign-in", "/sign-up"];
-const UNGUARDED_PATH_PREFIXES = ["/settings/change-login-id/complete"];
+const UNGUARDED_PATH_PREFIXES = [
+  "/settings/change-login-id/complete",
+  "/settings/change-password/reset/complete",
+];
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();

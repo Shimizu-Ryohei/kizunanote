@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   isSignInWithEmailLink,
   reauthenticateWithCredential,
+  sendPasswordResetEmail,
   sendSignInLinkToEmail,
   signInWithEmailAndPassword,
   signInWithEmailLink,
@@ -169,6 +170,21 @@ export async function changeCurrentUserPassword(currentPassword: string, nextPas
 
   await reauthenticateCurrentUser(currentPassword);
   await updatePassword(user, nextPassword);
+}
+
+export async function sendPasswordResetLinkToCurrentUser(redirectOrigin: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
+  const user = firebaseAuth.currentUser;
+
+  if (!user || !user.email) {
+    throw new Error("現在のユーザー情報を取得できませんでした。");
+  }
+
+  await sendPasswordResetEmail(firebaseAuth, user.email, {
+    url: `${redirectOrigin}/settings/change-password/reset/complete`,
+  });
+
+  return user.email;
 }
 
 export async function signOut() {

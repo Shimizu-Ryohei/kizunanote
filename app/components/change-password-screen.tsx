@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import MobileShell from "./mobile-shell";
 import PrimaryCta from "./primary-cta";
@@ -145,6 +146,13 @@ export default function ChangePasswordScreen() {
               {isSubmitting ? "変更中..." : "確認する"}
             </PrimaryCta>
           </form>
+
+          <Link
+            href="/settings/change-password/reset"
+            className="mx-auto mt-6 block w-fit text-center text-[10px] leading-none font-medium text-[#b5b5b5] underline"
+          >
+            パスワードをリセットする
+          </Link>
         </section>
       </main>
     </MobileShell>
