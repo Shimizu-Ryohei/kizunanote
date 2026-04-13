@@ -236,7 +236,8 @@ async function getOwnedProfileSnapshot(profileId: string, ownerUid: string) {
     throw new Error(getFirebaseConfigError());
   }
 
-  const profileRef = doc(firestore, "profiles", profileId);
+  const db = firestore;
+  const profileRef = doc(db, "profiles", profileId);
   const profileSnapshot = await getDoc(profileRef);
 
   if (!profileSnapshot.exists()) {
@@ -257,9 +258,8 @@ export async function listProfilesByOwner(ownerUid: string) {
     throw new Error(getFirebaseConfigError());
   }
 
-  const snapshot = await getDocs(
-    query(collection(firestore, "profiles"), where("ownerUid", "==", ownerUid)),
-  );
+  const db = firestore;
+  const snapshot = await getDocs(query(collection(db, "profiles"), where("ownerUid", "==", ownerUid)));
 
   return snapshot.docs
     .map((profileDoc) => {
@@ -296,6 +296,11 @@ export async function listProfilesByOwner(ownerUid: string) {
 }
 
 export async function getProfileDetailById(profileId: string, ownerUid: string) {
+  if (!firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  const db = firestore;
   const profileSnapshot = await getOwnedProfileSnapshot(profileId, ownerUid);
   const profileData = profileSnapshot.data() as {
     fullName?: string;
@@ -307,8 +312,8 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
   };
 
   const [contactSnapshot, noteSnapshot] = await Promise.all([
-    getDoc(doc(firestore, "profiles", profileId, "private", "contact")),
-    getDocs(collection(firestore, "profiles", profileId, "notes")),
+    getDoc(doc(db, "profiles", profileId, "private", "contact")),
+    getDocs(collection(db, "profiles", profileId, "notes")),
   ]);
 
   const contactData = (contactSnapshot.data() as Partial<ProfileContact> | undefined) ?? {};
@@ -354,6 +359,7 @@ export async function addProfileNote(profileId: string, body: string, userUid: s
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   const trimmedBody = body.trim();
 
@@ -361,7 +367,7 @@ export async function addProfileNote(profileId: string, body: string, userUid: s
     throw new Error("キズナノートを入力してください。");
   }
 
-  await addDoc(collection(firestore, "profiles", profileId, "notes"), {
+  await addDoc(collection(db, "profiles", profileId, "notes"), {
     body: trimmedBody,
     happenedAt: serverTimestamp(),
     createdByUid: userUid,
@@ -369,7 +375,7 @@ export async function addProfileNote(profileId: string, body: string, userUid: s
     updatedAt: serverTimestamp(),
   });
 
-  await updateDoc(doc(firestore, "profiles", profileId), {
+  await updateDoc(doc(db, "profiles", profileId), {
     noteCount: increment(1),
     latestNoteAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -380,9 +386,10 @@ export async function listProfileNotes(profileId: string, ownerUid: string) {
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   await getOwnedProfileSnapshot(profileId, ownerUid);
-  const snapshot = await getDocs(collection(firestore, "profiles", profileId, "notes"));
+  const snapshot = await getDocs(collection(db, "profiles", profileId, "notes"));
 
   return snapshot.docs
     .map((noteDoc) => {
@@ -403,9 +410,10 @@ export async function getProfileNoteById(profileId: string, noteId: string, owne
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   await getOwnedProfileSnapshot(profileId, ownerUid);
-  const noteSnapshot = await getDoc(doc(firestore, "profiles", profileId, "notes", noteId));
+  const noteSnapshot = await getDoc(doc(db, "profiles", profileId, "notes", noteId));
 
   if (!noteSnapshot.exists()) {
     throw new Error("キズナノートが見つかりませんでした。");
@@ -426,9 +434,10 @@ export async function updateProfileNote(profileId: string, noteId: string, body:
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   await getOwnedProfileSnapshot(profileId, ownerUid);
-  await updateDoc(doc(firestore, "profiles", profileId, "notes", noteId), {
+  await updateDoc(doc(db, "profiles", profileId, "notes", noteId), {
     body: body.trim(),
     updatedAt: serverTimestamp(),
   });
@@ -438,9 +447,10 @@ export async function getProfileContact(profileId: string, ownerUid: string) {
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   await getOwnedProfileSnapshot(profileId, ownerUid);
-  const snapshot = await getDoc(doc(firestore, "profiles", profileId, "private", "contact"));
+  const snapshot = await getDoc(doc(db, "profiles", profileId, "private", "contact"));
   const contactData = (snapshot.data() as Partial<ProfileContact> | undefined) ?? {};
 
   return {
@@ -458,10 +468,11 @@ export async function updateProfileContact(profileId: string, ownerUid: string, 
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   await getOwnedProfileSnapshot(profileId, ownerUid);
   await setDoc(
-    doc(firestore, "profiles", profileId, "private", "contact"),
+    doc(db, "profiles", profileId, "private", "contact"),
     {
       phone: input.phone.trim(),
       phoneCountryCode: input.phoneCountryCode.trim() || "+81",
@@ -480,6 +491,7 @@ export async function updateProfileBasics(profileId: string, ownerUid: string, i
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
   }
+  const db = firestore;
 
   await getOwnedProfileSnapshot(profileId, ownerUid);
   const normalizedBirthday = formatBirthdayForFirestore(input.birthday) || null;
@@ -507,5 +519,5 @@ export async function updateProfileBasics(profileId: string, ownerUid: string, i
     payload.photoStoragePath = photoStoragePath;
   }
 
-  await updateDoc(doc(firestore, "profiles", profileId), payload);
+  await updateDoc(doc(db, "profiles", profileId), payload);
 }
