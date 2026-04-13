@@ -4,6 +4,7 @@ import { useState } from "react";
 import PrimaryCta from "./primary-cta";
 import MobileShell from "./mobile-shell";
 import { reauthenticateCurrentUser, sendLoginIdChangeLink } from "@/lib/firebase/auth";
+import { useAuth } from "./auth-provider";
 
 function EyeIcon() {
   return (
@@ -35,6 +36,7 @@ function EyeOffIcon() {
 }
 
 export default function ChangeLoginIdScreen() {
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -79,6 +81,13 @@ export default function ChangeLoginIdScreen() {
           </p>
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            <div>
+              <span className="text-[13px] font-bold text-[#5b5b5b]">現在のメールアドレス</span>
+              <div className="mt-2 flex min-h-[52px] w-full items-center rounded-[16px] bg-white px-5 text-[16px] font-medium text-[#5d5d5d]">
+                {user?.email ?? "メールアドレスを取得できませんでした"}
+              </div>
+            </div>
+
             <label className="block">
               <span className="text-[13px] font-bold text-[#5b5b5b]">新しいメールアドレス</span>
               <input
