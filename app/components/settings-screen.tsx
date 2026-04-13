@@ -37,10 +37,10 @@ function SettingRow({
   );
 
   if (href) {
-    return <Link href={href}>{content}</Link>;
+    return <Link href={href} className="block">{content}</Link>;
   }
 
-  return <button type="button" className="w-full">{content}</button>;
+  return <button type="button" className="block w-full">{content}</button>;
 }
 
 function NotificationRow() {
@@ -77,7 +77,7 @@ export default function SettingsScreen() {
         <section className="mt-2">
           <div className="space-y-3">
             <SettingRow label="ログインID変更" href="/settings/change-login-id" />
-            <SettingRow label="パスワード変更" />
+            <SettingRow label="パスワード変更" href="/settings/change-password" />
             <NotificationRow />
           </div>
         </section>

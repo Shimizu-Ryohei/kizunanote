@@ -120,6 +120,18 @@ export async function signInWithEmail(email: string, password: string) {
   return signInWithEmailAndPassword(firebaseAuth, email, password);
 }
 
+export async function reauthenticateCurrentUser(password: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
+  const user = firebaseAuth.currentUser;
+
+  if (!user || !user.email) {
+    throw new Error("現在のユーザー情報を取得できませんでした。");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, password);
+  await reauthenticateWithCredential(user, credential);
+}
+
 export async function sendLoginIdChangeLink(nextEmail: string, redirectOrigin: string) {
   const { firebaseAuth } = ensureFirebaseAuth();
   const user = firebaseAuth.currentUser;
@@ -147,6 +159,18 @@ export async function completeLoginIdChange(actionCode: string) {
   return actionInfo.data.email ?? "";
 }
 
+export async function changeCurrentUserPassword(currentPassword: string, nextPassword: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
+  const user = firebaseAuth.currentUser;
+
+  if (!user) {
+    throw new Error("ログイン中のユーザーが見つかりません。");
+  }
+
+  await reauthenticateCurrentUser(currentPassword);
+  await updatePassword(user, nextPassword);
+}
+
 export async function signOut() {
   const { firebaseAuth } = ensureFirebaseAuth();
   return firebaseSignOut(firebaseAuth);
@@ -172,8 +196,7 @@ export async function deleteCurrentUserAccount(password: string) {
     throw new Error("現在のユーザー情報を取得できませんでした。");
   }
 
-  const credential = EmailAuthProvider.credential(user.email, password);
-  await reauthenticateWithCredential(user, credential);
+  await reauthenticateCurrentUser(password);
 
   const profilesSnapshot = await getDocs(
     query(collection(firestore, "profiles"), where("ownerUid", "==", user.uid)),
