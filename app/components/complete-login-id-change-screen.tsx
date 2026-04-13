@@ -41,10 +41,10 @@ export default function CompleteLoginIdChangeScreen() {
           </p>
           <div className="mt-10">
             <Link
-              href="/settings"
+              href="/home"
               className="flex h-[58px] w-full items-center justify-center rounded-full bg-[var(--color-main)] text-[15px] font-bold text-white"
             >
-              設定へ戻る
+              ホームへ戻る
             </Link>
           </div>
         </div>
@@ -67,10 +67,10 @@ export default function CompleteLoginIdChangeScreen() {
 
         <div className="mt-10">
           <Link
-            href={status === "success" ? "/settings" : "/settings/change-login-id"}
+            href={status === "success" ? "/home" : "/settings/change-login-id"}
             className="flex h-[58px] w-full items-center justify-center rounded-full bg-[var(--color-main)] text-[15px] font-bold text-white"
           >
-            {status === "success" ? "設定へ戻る" : "もう一度試す"}
+            {status === "success" ? "ホームへ戻る" : "もう一度試す"}
           </Link>
         </div>
       </div>

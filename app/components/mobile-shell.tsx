@@ -38,7 +38,10 @@ function SettingsIcon() {
 
 export function AppHeader() {
   return (
-    <header className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[430px] bg-white/95 px-7 pb-3 pt-5 backdrop-blur">
+    <header
+      className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[430px] bg-white/95 px-7 pb-3 backdrop-blur"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
+    >
       <Link href="/home" className="inline-block text-[22px] font-black tracking-[0] text-black">
         キズナノート
       </Link>
@@ -60,8 +63,8 @@ export function BottomMenu() {
         <Link
           href="/home"
           aria-label="ホーム"
-          className={`justify-self-center flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-            isHomeActive ? "bg-black text-white" : "text-[#b8b8b8]"
+          className={`justify-self-center flex h-10 w-10 items-center justify-center transition-colors ${
+            isHomeActive ? "text-black" : "text-[#b8b8b8]"
           }`}
         >
           <HomeIcon />
@@ -76,8 +79,8 @@ export function BottomMenu() {
         <Link
           href="/settings"
           aria-label="プロフィール"
-          className={`justify-self-center flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-            isSettingsActive ? "bg-black text-white" : "text-[#b8b8b8]"
+          className={`justify-self-center flex h-10 w-10 items-center justify-center transition-colors ${
+            isSettingsActive ? "text-black" : "text-[#b8b8b8]"
           }`}
         >
           <SettingsIcon />
@@ -92,7 +95,7 @@ export default function MobileShell({ children }: MobileShellProps) {
     <div className="min-h-screen bg-[#ececec] sm:bg-[#dedede]">
       <div className="mx-auto min-h-screen max-w-[430px] overflow-hidden bg-[#f7f7f7] shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
         <AppHeader />
-        <div className="pt-[70px]">{children}</div>
+        <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 70px)" }}>{children}</div>
         <BottomMenu />
       </div>
     </div>

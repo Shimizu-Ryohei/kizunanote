@@ -78,11 +78,13 @@ type ProfileDoc = {
   firstName: string;
   lastNameKana: string;
   firstNameKana: string;
-  birthday?: string; // "1992-11-20"
-  company?: string;
-  role?: string;
-  photoUrl?: string;
-  latestContactAt?: Timestamp;
+  fullName: string;
+  fullNameKana: string;
+  birthday?: string | null; // "1992-11-20"
+  photoUrl?: string | null;
+  photoStoragePath?: string | null;
+  noteCount: number;
+  latestNoteAt?: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -101,8 +103,7 @@ type ProfileDoc = {
 
 ### 3. profileContacts
 
-1 プロフィールにつき 1 ドキュメントでも、プロフィール本体に埋め込みでもよい。
-今回は更新単位が明確なので分離を推奨。
+1 プロフィールにつき 1 ドキュメント。連絡先は履歴ではなく上書き前提なので、常にこの 1 ドキュメントを更新する。
 
 Path:
 
@@ -194,7 +195,7 @@ type ProfileSummaryDoc = {
 Path:
 
 ```text
-users/{uid}/billing/events/{eventId}
+users/{uid}/billingEvents/{eventId}
 ```
 
 Shape:
@@ -227,7 +228,16 @@ type BillingEventDoc = {
 保存先:
 
 - `profiles/{profileId}`
+- `profiles/{profileId}/private/contact`
+- `profiles/{profileId}/private/summary`
+- `profiles/{profileId}/notes/{noteId}` if 初回ノートあり
 - 画像ありなら Storage
+
+保存ルール:
+
+- ログインユーザーの `uid` を `ownerUid` に必ず保存
+- `キズナノート` は履歴として `notes` サブコレクションへ追加
+- 連絡先、要約、基本情報は最新状態を単一ドキュメントへ上書き
 
 ### `/profiles/[id]`
 

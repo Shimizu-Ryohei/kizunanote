@@ -30,7 +30,7 @@ export default function ProfileHeader({
             src={profile.avatarSrc}
             width={avatarSize}
             height={avatarSize}
-            className="h-full w-full object-cover grayscale"
+            className="h-full w-full object-cover"
           />
         ) : (
           profile.avatarFallback

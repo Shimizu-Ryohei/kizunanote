@@ -1,6 +1,8 @@
 type CompressImageOptions = {
   maxDimension?: number;
   quality?: number;
+  minQuality?: number;
+  targetMaxBytes?: number;
 };
 
 function loadImage(file: File) {
@@ -30,7 +32,12 @@ export async function compressImage(
     return file;
   }
 
-  const { maxDimension = 1280, quality = 0.82 } = options;
+  const {
+    maxDimension = 960,
+    quality = 0.74,
+    minQuality = 0.52,
+    targetMaxBytes = 350 * 1024,
+  } = options;
   const image = await loadImage(file);
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
@@ -47,9 +54,17 @@ export async function compressImage(
   canvas.height = height;
   context.drawImage(image, 0, 0, width, height);
 
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/jpeg", quality);
+  let currentQuality = quality;
+  let blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", currentQuality);
   });
+
+  while (blob && blob.size > targetMaxBytes && currentQuality > minQuality) {
+    currentQuality = Math.max(minQuality, Number((currentQuality - 0.06).toFixed(2)));
+    blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", currentQuality);
+    });
+  }
 
   if (!blob) {
     return file;
