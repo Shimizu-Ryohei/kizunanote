@@ -250,10 +250,10 @@ export default function ProfileContactInfoEditScreen({ profileId }: { profileId:
             <section className="mt-9">
               <h2 className="text-[14px] font-bold text-[#5f5f5f]">SNS</h2>
               <div className="mt-5 space-y-6">
-                <SocialCard value={form.x} onChange={(value) => updateField("x", value)} icon={<XGlyph />} placeholder="@username" />
+                <SocialCard value={form.x} onChange={(value) => updateField("x", value)} icon={<XGlyph />} placeholder="username" />
                 <SocialCard value={form.facebook} onChange={(value) => updateField("facebook", value)} icon={<FacebookGlyph />} placeholder="username" />
-                <SocialCard value={form.instagram} onChange={(value) => updateField("instagram", value)} icon={<InstagramGlyph />} placeholder="@username" />
-                <SocialCard value={form.linkedin} onChange={(value) => updateField("linkedin", value)} icon={<LinkedInGlyph />} placeholder="linkedin.com/in/username" />
+                <SocialCard value={form.instagram} onChange={(value) => updateField("instagram", value)} icon={<InstagramGlyph />} placeholder="username" />
+                <SocialCard value={form.linkedin} onChange={(value) => updateField("linkedin", value)} icon={<LinkedInGlyph />} placeholder="username または in/username" />
               </div>
             </section>
 

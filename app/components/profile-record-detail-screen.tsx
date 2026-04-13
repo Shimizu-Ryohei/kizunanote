@@ -197,11 +197,16 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
     const xHandle = profile.contacts.x.replace(/^@/, "");
     const facebookPath = profile.contacts.facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, "").replace(/^@/, "");
     const instagramHandle = profile.contacts.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/^@/, "").replace(/\/$/, "");
-    const linkedInUrl = profile.contacts.linkedin.startsWith("http")
-      ? profile.contacts.linkedin
-      : profile.contacts.linkedin
-        ? `https://${profile.contacts.linkedin}`
-        : "";
+    const linkedInValue = profile.contacts.linkedin
+      .replace(/^https?:\/\/(www\.)?linkedin\.com\//, "")
+      .replace(/^\/+/, "")
+      .replace(/\/$/, "");
+    const linkedInPath = linkedInValue
+      ? linkedInValue.startsWith("in/") || linkedInValue.startsWith("company/")
+        ? linkedInValue
+        : `in/${linkedInValue.replace(/^@/, "")}`
+      : "";
+    const linkedInUrl = linkedInPath ? `https://www.linkedin.com/${linkedInPath}` : "";
 
     return [
       {
