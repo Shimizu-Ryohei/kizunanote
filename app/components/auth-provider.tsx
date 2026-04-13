@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { firebaseAuth } from "@/lib/firebase/client";
+import { syncUserDocument } from "@/lib/firebase/auth";
 
 type AuthContextValue = {
   isLoading: boolean;
@@ -38,6 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (nextUser) => {
       setUser(nextUser);
       setIsLoading(false);
+
+      if (nextUser) {
+        syncUserDocument(nextUser).catch((error) => {
+          console.error("Failed to sync user document", error);
+        });
+      }
     });
 
     return unsubscribe;

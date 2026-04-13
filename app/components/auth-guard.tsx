@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./auth-provider";
 
 const PUBLIC_PATH_PREFIXES = ["/sign-in", "/sign-up"];
+const UNGUARDED_PATH_PREFIXES = ["/settings/change-login-id/complete"];
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -13,8 +14,13 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    const isUnguardedPath = UNGUARDED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
     if (isLoading) {
+      return;
+    }
+
+    if (isUnguardedPath) {
       return;
     }
 
@@ -29,6 +35,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   }, [isLoading, pathname, router, user]);
 
   const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isUnguardedPath = UNGUARDED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   if (isLoading) {
     return (
@@ -36,6 +43,10 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
         読み込み中...
       </div>
     );
+  }
+
+  if (isUnguardedPath) {
+    return <>{children}</>;
   }
 
   if (!user && !isPublicPath) {

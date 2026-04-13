@@ -1,4 +1,6 @@
 import {
+  applyActionCode,
+  checkActionCode,
   deleteUser,
   EmailAuthProvider,
   createUserWithEmailAndPassword,
@@ -8,7 +10,9 @@ import {
   signInWithEmailAndPassword,
   signInWithEmailLink,
   signOut as firebaseSignOut,
+  type User,
   updatePassword,
+  verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import {
   collection,
@@ -32,6 +36,19 @@ function ensureFirebaseAuth() {
 }
 
 export const PENDING_SIGN_UP_EMAIL_KEY = "kizunanote_pending_sign_up_email";
+
+export async function syncUserDocument(user: User) {
+  const { firestore } = ensureFirebaseAuth();
+
+  await setDoc(
+    doc(firestore, "users", user.uid),
+    {
+      email: user.email ?? "",
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
 
 export async function signUpWithEmail(email: string, password: string) {
   const { firebaseAuth, firestore } = ensureFirebaseAuth();
@@ -101,6 +118,33 @@ export async function completeSignUpWithEmailLink(
 export async function signInWithEmail(email: string, password: string) {
   const { firebaseAuth } = ensureFirebaseAuth();
   return signInWithEmailAndPassword(firebaseAuth, email, password);
+}
+
+export async function sendLoginIdChangeLink(nextEmail: string, redirectOrigin: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
+  const user = firebaseAuth.currentUser;
+
+  if (!user) {
+    throw new Error("ログイン中のユーザーが見つかりません。");
+  }
+
+  await verifyBeforeUpdateEmail(user, nextEmail, {
+    url: `${redirectOrigin}/settings/change-login-id/complete`,
+    handleCodeInApp: true,
+  });
+}
+
+export async function completeLoginIdChange(actionCode: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
+  const actionInfo = await checkActionCode(firebaseAuth, actionCode);
+  await applyActionCode(firebaseAuth, actionCode);
+
+  if (firebaseAuth.currentUser) {
+    await firebaseAuth.currentUser.reload();
+    await syncUserDocument(firebaseAuth.currentUser);
+  }
+
+  return actionInfo.data.email ?? "";
 }
 
 export async function signOut() {

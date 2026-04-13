@@ -22,20 +22,25 @@ function ChevronRight() {
 
 function SettingRow({
   label,
+  href,
 }: {
   label: string;
+  href?: string;
 }) {
-  return (
-    <button
-      type="button"
-      className="flex h-[52px] w-full items-center rounded-[14px] bg-white px-5 text-left text-[14px] font-medium text-[#2f2f2f] shadow-[0_1px_0_rgba(0,0,0,0.01)]"
-    >
+  const content = (
+    <span className="flex h-[52px] w-full items-center rounded-[14px] bg-white px-5 text-left text-[14px] font-medium text-[#2f2f2f] shadow-[0_1px_0_rgba(0,0,0,0.01)]">
       <span className="flex-1 text-[14px] font-medium leading-none">{label}</span>
       <span className="text-[#c8c8c8]">
         <ChevronRight />
       </span>
-    </button>
+    </span>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+
+  return <button type="button" className="w-full">{content}</button>;
 }
 
 function NotificationRow() {
@@ -71,7 +76,7 @@ export default function SettingsScreen() {
       <main className="px-4 pb-28">
         <section className="mt-2">
           <div className="space-y-3">
-            <SettingRow label="ログインID変更" />
+            <SettingRow label="ログインID変更" href="/settings/change-login-id" />
             <SettingRow label="パスワード変更" />
             <NotificationRow />
           </div>
