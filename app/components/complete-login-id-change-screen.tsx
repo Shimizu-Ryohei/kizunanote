@@ -37,14 +37,14 @@ export default function CompleteLoginIdChangeScreen() {
           <h1 className="text-[24px] font-black text-black">キズナノート</h1>
           <h2 className="mt-8 text-[22px] font-black text-black">ログインID変更</h2>
           <p className="mt-3 text-[14px] font-medium leading-7 text-[#5f5f5f]">
-            認証リンクが無効です。メールからもう一度お試しください。
+            ログインID（メールアドレス）を変更しました。
           </p>
           <div className="mt-10">
             <Link
-              href="/settings/change-login-id"
+              href="/settings"
               className="flex h-[58px] w-full items-center justify-center rounded-full bg-[var(--color-main)] text-[15px] font-bold text-white"
             >
-              もう一度試す
+              設定へ戻る
             </Link>
           </div>
         </div>
