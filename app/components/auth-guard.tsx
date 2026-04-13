@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./auth-provider";
 
-const PUBLIC_PATHS = new Set(["/sign-in", "/sign-up"]);
+const PUBLIC_PATH_PREFIXES = ["/sign-in", "/sign-up"];
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -12,19 +12,23 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   const { isLoading, user } = useAuth();
 
   useEffect(() => {
+    const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
     if (isLoading) {
       return;
     }
 
-    if (!user && !PUBLIC_PATHS.has(pathname)) {
+    if (!user && !isPublicPath) {
       router.replace(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
-    if (user && PUBLIC_PATHS.has(pathname)) {
+    if (user && isPublicPath) {
       router.replace("/home");
     }
   }, [isLoading, pathname, router, user]);
+
+  const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   if (isLoading) {
     return (
@@ -34,11 +38,11 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user && !PUBLIC_PATHS.has(pathname)) {
+  if (!user && !isPublicPath) {
     return null;
   }
 
-  if (user && PUBLIC_PATHS.has(pathname)) {
+  if (user && isPublicPath) {
     return null;
   }
 

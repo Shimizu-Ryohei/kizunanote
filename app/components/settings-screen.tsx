@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { signOut } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
@@ -87,13 +88,13 @@ export default function SettingsScreen() {
           >
             <span>ログアウトする</span>
           </button>
-          <button
-            type="button"
-            className="mx-auto mt-6 block text-[10px] leading-none font-medium text-[#b5b5b5] underline"
+          <Link
+            href="/settings/delete-account"
+            className="mx-auto mt-6 block w-fit text-center text-[10px] leading-none font-medium text-[#b5b5b5] underline"
             style={{ fontSize: "10px", lineHeight: 1 }}
           >
             アカウントを削除する
-          </button>
+          </Link>
         </section>
       </main>
     </MobileShell>

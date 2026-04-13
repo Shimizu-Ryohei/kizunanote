@@ -1,10 +1,27 @@
 import {
+  deleteUser,
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
+  isSignInWithEmailLink,
+  reauthenticateWithCredential,
+  sendSignInLinkToEmail,
   signInWithEmailAndPassword,
+  signInWithEmailLink,
   signOut as firebaseSignOut,
+  updatePassword,
 } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { firebaseAuth, firestore, getFirebaseConfigError } from "./client";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
+} from "firebase/firestore";
+import { deleteObject, listAll, ref } from "firebase/storage";
+import { firebaseAuth, firestore, getFirebaseConfigError, storage } from "./client";
 
 function ensureFirebaseAuth() {
   if (!firebaseAuth || !firestore) {
@@ -14,10 +31,56 @@ function ensureFirebaseAuth() {
   return { firebaseAuth, firestore };
 }
 
+export const PENDING_SIGN_UP_EMAIL_KEY = "kizunanote_pending_sign_up_email";
+
 export async function signUpWithEmail(email: string, password: string) {
   const { firebaseAuth, firestore } = ensureFirebaseAuth();
   const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
   const user = credential.user;
+
+  await setDoc(
+    doc(firestore, "users", user.uid),
+    {
+      email: user.email,
+      displayName: "",
+      notificationEnabled: true,
+      subscriptionStatus: "free",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return credential;
+}
+
+export async function sendSignUpLink(email: string, redirectOrigin: string) {
+  const { firebaseAuth } = ensureFirebaseAuth();
+
+  await sendSignInLinkToEmail(firebaseAuth, email, {
+    url: `${redirectOrigin}/sign-up/complete`,
+    handleCodeInApp: true,
+  });
+}
+
+export function isEmailLinkSignIn(link: string) {
+  if (!firebaseAuth) {
+    return false;
+  }
+
+  return isSignInWithEmailLink(firebaseAuth, link);
+}
+
+export async function completeSignUpWithEmailLink(
+  email: string,
+  password: string,
+  emailLink: string,
+) {
+  const { firebaseAuth, firestore } = ensureFirebaseAuth();
+  const credential = await signInWithEmailLink(firebaseAuth, email, emailLink);
+  const user = credential.user;
+
+  await updatePassword(user, password);
 
   await setDoc(
     doc(firestore, "users", user.uid),
@@ -43,4 +106,60 @@ export async function signInWithEmail(email: string, password: string) {
 export async function signOut() {
   const { firebaseAuth } = ensureFirebaseAuth();
   return firebaseSignOut(firebaseAuth);
+}
+
+async function deleteStorageFolder(path: string) {
+  if (!storage) {
+    return;
+  }
+
+  const folderRef = ref(storage, path);
+  const listed = await listAll(folderRef);
+
+  await Promise.all(listed.items.map((item) => deleteObject(item)));
+  await Promise.all(listed.prefixes.map((prefix) => deleteStorageFolder(prefix.fullPath)));
+}
+
+export async function deleteCurrentUserAccount(password: string) {
+  const { firebaseAuth, firestore } = ensureFirebaseAuth();
+  const user = firebaseAuth.currentUser;
+
+  if (!user || !user.email) {
+    throw new Error("現在のユーザー情報を取得できませんでした。");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, password);
+  await reauthenticateWithCredential(user, credential);
+
+  const profilesSnapshot = await getDocs(
+    query(collection(firestore, "profiles"), where("ownerUid", "==", user.uid)),
+  );
+
+  for (const profileDoc of profilesSnapshot.docs) {
+    const notesSnapshot = await getDocs(
+      collection(firestore, "profiles", profileDoc.id, "notes"),
+    );
+
+    await Promise.all(notesSnapshot.docs.map((noteDoc) => deleteDoc(noteDoc.ref)));
+    await deleteDoc(doc(firestore, "profiles", profileDoc.id, "private", "contact"));
+    await deleteDoc(doc(firestore, "profiles", profileDoc.id, "private", "summary"));
+    await deleteDoc(profileDoc.ref);
+  }
+
+  const billingSnapshot = await getDocs(
+    collection(firestore, "users", user.uid, "billingEvents"),
+  );
+  await Promise.all(billingSnapshot.docs.map((billingDoc) => deleteDoc(billingDoc.ref)));
+
+  await deleteDoc(doc(firestore, "users", user.uid));
+
+  if (storage) {
+    try {
+      await deleteStorageFolder(`users/${user.uid}`);
+    } catch (error) {
+      console.error("Failed to delete user storage files", error);
+    }
+  }
+
+  await deleteUser(user);
 }

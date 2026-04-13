@@ -1,5 +1,5 @@
-import AuthScreen from "../components/auth-screen";
+import SignUpRequestScreen from "../components/sign-up-request-screen";
 
 export default function SignUpPage() {
-  return <AuthScreen mode="sign-up" />;
+  return <SignUpRequestScreen />;
 }
