@@ -51,8 +51,9 @@ export function AppHeader() {
 
 export function BottomMenu() {
   const pathname = usePathname();
-  const isHomeActive = pathname === "/home";
-  const isSettingsActive = pathname === "/settings";
+  const isHomeActive =
+    pathname === "/home" || (pathname.startsWith("/profiles") && pathname !== "/profiles/new");
+  const isSettingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
 
   return (
     <nav
@@ -92,7 +93,7 @@ export function BottomMenu() {
 
 export default function MobileShell({ children }: MobileShellProps) {
   return (
-    <div className="min-h-screen bg-[#ececec] sm:bg-[#dedede]">
+    <div className="min-h-screen bg-white sm:bg-[#dedede]">
       <div className="mx-auto min-h-screen max-w-[430px] overflow-hidden bg-[#f7f7f7] shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
         <AppHeader />
         <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 70px)" }}>{children}</div>
