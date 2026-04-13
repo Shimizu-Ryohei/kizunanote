@@ -11,6 +11,9 @@ export type ProfileDoc = {
   photoStoragePath: string | null;
   noteCount: number;
   latestNoteAt: unknown | null;
+  lastNoteUpdatedAt: unknown | null;
+  lastSummarizedAt: unknown | null;
+  summaryStatus: "idle" | "pending" | "processing" | "ready" | "error";
   createdAt: unknown;
   updatedAt: unknown;
 };
@@ -27,9 +30,13 @@ export type ProfileContactDoc = {
 };
 
 export type ProfileSummaryDoc = {
+  ownerUid: string;
   bullets: string[];
-  sourceNoteIds: string[];
-  generatedAt: unknown | null;
+  sourceNoteCount: number;
+  lastNoteUpdatedAt: unknown | null;
+  lastSummarizedAt: unknown | null;
+  model: string | null;
+  version: number;
   updatedAt: unknown;
 };
 

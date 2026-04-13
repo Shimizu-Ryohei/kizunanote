@@ -86,6 +86,8 @@ export type ProfileDetail = {
   photoUrl: string | null;
   noteCount: number;
   latestNoteLabel: string;
+  summaryBullets: string[];
+  summaryStatus: "idle" | "pending" | "processing" | "ready" | "error";
   contacts: ProfileContact;
   notes: ProfileNoteItem[];
 };
@@ -140,6 +142,9 @@ export async function createProfile({
     photoStoragePath: null,
     noteCount: trimmedNoteBody ? 1 : 0,
     latestNoteAt: trimmedNoteBody ? serverTimestamp() : null,
+    lastNoteUpdatedAt: trimmedNoteBody ? serverTimestamp() : null,
+    lastSummarizedAt: null,
+    summaryStatus: trimmedNoteBody ? "pending" : "idle",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -158,9 +163,13 @@ export async function createProfile({
   };
 
   const summaryPayload: ProfileSummaryDoc = {
+    ownerUid: user.uid,
     bullets: [],
-    sourceNoteIds: [],
-    generatedAt: null,
+    sourceNoteCount: 0,
+    lastNoteUpdatedAt: null,
+    lastSummarizedAt: null,
+    model: null,
+    version: 1,
     updatedAt: serverTimestamp(),
   };
 
@@ -309,14 +318,18 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
     photoUrl?: string | null;
     noteCount?: number;
     latestNoteAt?: unknown;
+    summaryStatus?: ProfileDetail["summaryStatus"];
   };
 
-  const [contactSnapshot, noteSnapshot] = await Promise.all([
+  const [contactSnapshot, summarySnapshot, noteSnapshot] = await Promise.all([
     getDoc(doc(db, "profiles", profileId, "private", "contact")),
+    getDoc(doc(db, "profiles", profileId, "private", "summary")),
     getDocs(collection(db, "profiles", profileId, "notes")),
   ]);
 
   const contactData = (contactSnapshot.data() as Partial<ProfileContact> | undefined) ?? {};
+  const summaryData =
+    (summarySnapshot.data() as Partial<Pick<ProfileSummaryDoc, "bullets">> | undefined) ?? {};
   const notes = noteSnapshot.docs
     .map((noteDoc) => {
       const noteData = noteDoc.data() as { body?: string; happenedAt?: unknown; createdAt?: unknown };
@@ -342,6 +355,10 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
     photoUrl: profileData.photoUrl ?? null,
     noteCount: profileData.noteCount ?? notes.length,
     latestNoteLabel: latestNoteDate ? formatDateLabel(latestNoteDate) : "",
+    summaryBullets: Array.isArray(summaryData.bullets)
+      ? summaryData.bullets.filter((bullet): bullet is string => typeof bullet === "string")
+      : [],
+    summaryStatus: profileData.summaryStatus ?? "idle",
     contacts: {
       phoneCountryCode: contactData.phoneCountryCode ?? "+81",
       phone: contactData.phone ?? "",
@@ -378,6 +395,8 @@ export async function addProfileNote(profileId: string, body: string, userUid: s
   await updateDoc(doc(db, "profiles", profileId), {
     noteCount: increment(1),
     latestNoteAt: serverTimestamp(),
+    lastNoteUpdatedAt: serverTimestamp(),
+    summaryStatus: "pending",
     updatedAt: serverTimestamp(),
   });
 }
@@ -439,6 +458,12 @@ export async function updateProfileNote(profileId: string, noteId: string, body:
   await getOwnedProfileSnapshot(profileId, ownerUid);
   await updateDoc(doc(db, "profiles", profileId, "notes", noteId), {
     body: body.trim(),
+    updatedAt: serverTimestamp(),
+  });
+
+  await updateDoc(doc(db, "profiles", profileId), {
+    lastNoteUpdatedAt: serverTimestamp(),
+    summaryStatus: "pending",
     updatedAt: serverTimestamp(),
   });
 }

@@ -18,17 +18,23 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
 ## Firebase Setup
 
 1. Create a Firebase project and add a Web App in the Firebase console.
 2. Copy `.env.local.example` to `.env.local`.
 3. Fill in the `NEXT_PUBLIC_FIREBASE_*` values from your Firebase Web App config.
+4. Fill in `OPENAI_API_KEY` if you want to enable daily profile summarization.
 4. Use [`lib/firebase/client.ts`](/Users/ryoheishimizu/kizunanote/lib/firebase/client.ts) to access:
    - `firebaseAuth`
    - `firestore`
    - `storage`
+
+## Scheduled Summaries
+
+- Profile summaries are stored in Firestore at `profiles/{profileId}/private/summary`.
+- Notes mark the profile as `summaryStatus: "pending"` when added or edited.
+- A Firebase scheduled function runs every day at `05:00` (`Asia/Tokyo`) and refreshes summaries for pending profiles.
+- Function source lives in [functions/index.js](/Users/ryoheishimizu/kizunanote/functions/index.js).
 
 ## Learn More
 

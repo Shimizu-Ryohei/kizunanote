@@ -248,7 +248,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
     ].filter((item) => item.value);
   }, [profile]);
 
-  const noteSummaries = profile?.notes.slice(0, 5) ?? [];
+  const summaryBullets = profile?.summaryBullets ?? [];
 
   const handleSaveNote = async () => {
     if (!user) {
@@ -298,17 +298,23 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                 <SparklesIcon />
                 <span>キズナノート要約</span>
               </h2>
-              {noteSummaries.length ? (
+              {summaryBullets.length ? (
                 <ul className="mt-3 space-y-3 text-[14px] font-medium leading-6 text-[#333]">
-                  {noteSummaries.map((note) => (
-                    <li key={note.id} className="flex items-center gap-2">
+                  {summaryBullets.map((bullet, index) => (
+                    <li key={`${index}-${bullet}`} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
-                      <span>{note.body}</span>
+                      <span>{bullet}</span>
                     </li>
                   ))}
                 </ul>
+              ) : profile.summaryStatus === "pending" || profile.summaryStatus === "processing" ? (
+                <p className="mt-3 text-[14px] font-medium text-[#9f9f9f]">
+                  要約は次回の自動更新後に表示されます。
+                </p>
               ) : (
-                <p className="mt-3 text-[14px] font-medium text-[#9f9f9f]">まだキズナノートがありません。</p>
+                <p className="mt-3 text-[14px] font-medium text-[#9f9f9f]">
+                  まだキズナノート要約がありません。
+                </p>
               )}
               <Link
                 href={`/profiles/${profileId}/notes`}
