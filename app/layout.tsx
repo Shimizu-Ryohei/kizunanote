@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import { Noto_Sans_JP } from "next/font/google";
 import AuthGuard from "./components/auth-guard";
 import { AuthProvider } from "./components/auth-provider";
 import "./globals.css";
-
-const notoSansJp = Noto_Sans_JP({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-});
 
 export const metadata: Metadata = {
   title: "キズナノート",
@@ -21,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="h-full antialiased">
-      <body className={`${notoSansJp.className} min-h-full`}>
+      <body className="min-h-full">
         <AuthProvider>
           <AuthGuard>{children}</AuthGuard>
         </AuthProvider>

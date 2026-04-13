@@ -109,6 +109,7 @@ export default function ProfileContactInfoEditScreen({ profileId }: { profileId:
   const { user } = useAuth();
   const [profile, setProfile] = useState<ProfileDetail | null>(null);
   const [form, setForm] = useState<ProfileContact>({
+    phoneCountryCode: "+81",
     phone: "",
     email: "",
     x: "",
