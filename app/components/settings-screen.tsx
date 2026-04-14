@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { signOut } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import MobileShell from "./mobile-shell";
@@ -43,31 +42,6 @@ function SettingRow({
   return <button type="button" className="block w-full">{content}</button>;
 }
 
-function NotificationRow() {
-  const [enabled, setEnabled] = useState(true);
-
-  return (
-    <button
-      type="button"
-      onClick={() => setEnabled((current) => !current)}
-      className="flex h-[52px] w-full items-center rounded-[14px] bg-white px-5 text-left text-[14px] font-medium text-[#2f2f2f] shadow-[0_1px_0_rgba(0,0,0,0.01)]"
-    >
-      <span className="flex-1 text-[14px] font-medium leading-none">通知設定</span>
-      <span
-        className={`flex h-5 w-9 items-center rounded-full p-[2px] transition-colors ${
-          enabled ? "bg-[#59c183]" : "bg-[#dedede]"
-        }`}
-      >
-        <span
-          className={`h-4 w-4 rounded-full transition-transform ${
-            enabled ? "translate-x-4 bg-white" : "translate-x-0 bg-white"
-          }`}
-        />
-      </span>
-    </button>
-  );
-}
-
 export default function SettingsScreen() {
   const router = useRouter();
 
@@ -78,7 +52,8 @@ export default function SettingsScreen() {
           <div className="space-y-3">
             <SettingRow label="ログインID変更" href="/settings/change-login-id" />
             <SettingRow label="パスワード変更" href="/settings/change-password" />
-            <NotificationRow />
+            <SettingRow label="通知設定" href="/settings/notifications" />
+            <SettingRow label="利用規約等" href="/settings/legal" />
           </div>
         </section>
 

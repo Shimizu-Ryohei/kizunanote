@@ -100,6 +100,21 @@ function EmptyState({ hasSearchQuery }: { hasSearchQuery: boolean }) {
   );
 }
 
+function FirstProfilePrompt() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 z-20 mx-auto flex max-w-[430px] justify-center px-6"
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 6.5rem)" }}
+    >
+      <div className="animate-[prompt-bob_1.1s_ease-out] relative max-w-[272px] rounded-[18px] bg-[var(--color-main)] px-4 py-3 text-center text-[13px] font-black leading-5 text-white shadow-[0_10px_24px_rgba(48,124,255,0.22)]">
+        <span className="block">まずはここから</span>
+        <span className="block">知り合いを登録してみよう</span>
+        <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[10px] border-t-[12px] border-x-transparent border-t-[var(--color-main)]" />
+      </div>
+    </div>
+  );
+}
+
 export default function HomeScreen() {
   const { user } = useAuth();
   const [profiles, setProfiles] = useState<ProfileListItem[]>([]);
@@ -165,6 +180,9 @@ export default function HomeScreen() {
     [filteredProfiles],
   );
 
+  const shouldShowFirstProfilePrompt =
+    !isLoading && !errorMessage && profiles.length === 0 && !searchQuery.trim();
+
   return (
     <MobileShell>
       <main className="px-7 pb-28">
@@ -198,6 +216,7 @@ export default function HomeScreen() {
             ))
           : null}
       </main>
+      {shouldShowFirstProfilePrompt ? <FirstProfilePrompt /> : null}
     </MobileShell>
   );
 }

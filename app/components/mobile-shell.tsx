@@ -62,31 +62,36 @@ export function BottomMenu() {
       className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-black/5 bg-white/95 shadow-[0_-10px_28px_rgba(0,0,0,0.04)] backdrop-blur"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0.75rem)" }}
     >
-      <div className="grid h-[58px] grid-cols-3 items-center px-8">
+      <div className="grid h-[72px] grid-cols-3 items-end px-6 pb-2">
         <Link
           href="/home"
           aria-label="ホーム"
-          className={`justify-self-center flex h-10 w-10 items-center justify-center transition-colors ${
+          className={`justify-self-center flex flex-col items-center gap-1 transition-colors ${
             isHomeActive ? "text-black" : "text-[#b8b8b8]"
           }`}
         >
           <HomeIcon />
+          <span className="text-[10px] font-bold leading-none">ホーム</span>
         </Link>
         <Link
           href="/profiles/new"
           aria-label="新規作成"
-          className="justify-self-center flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[var(--color-main)] text-[26px] font-light leading-none text-white transition-colors"
+          className="justify-self-center flex flex-col items-center gap-1 text-[var(--color-main)] transition-colors"
         >
-          +
+          <span className="relative -top-1 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--color-main)] text-[30px] font-black leading-none text-white">
+            <span className="relative -top-px">+</span>
+          </span>
+          <span className="text-[10px] font-bold leading-none">プロフィール追加</span>
         </Link>
         <Link
           href="/settings"
           aria-label="プロフィール"
-          className={`justify-self-center flex h-10 w-10 items-center justify-center transition-colors ${
+          className={`justify-self-center flex flex-col items-center gap-1 transition-colors ${
             isSettingsActive ? "text-black" : "text-[#b8b8b8]"
           }`}
         >
           <SettingsIcon />
+          <span className="text-[10px] font-bold leading-none">設定</span>
         </Link>
       </div>
     </nav>
