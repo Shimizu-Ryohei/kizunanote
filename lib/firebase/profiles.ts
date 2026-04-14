@@ -90,7 +90,6 @@ export type ProfileDetail = {
   summaryBullets: string[];
   summaryStatus: "idle" | "pending" | "processing" | "ready" | "error";
   contacts: ProfileContact;
-  notes: ProfileNoteItem[];
 };
 
 function ensureFirebaseProfileAccess() {
@@ -139,6 +138,7 @@ export async function createProfile({
     fullName: `${trimmedLastName} ${trimmedFirstName}`.trim(),
     fullNameKana: `${trimmedLastNameKana} ${trimmedFirstNameKana}`.trim(),
     birthday: normalizedBirthday,
+    workplaceTag: null,
     photoUrl: null,
     photoStoragePath: null,
     noteCount: trimmedNoteBody ? 1 : 0,
@@ -225,90 +225,6 @@ function formatBirthdayForDisplay(value: string | null) {
   return `${year}年${Number(month)}月${Number(day)}日`;
 }
 
-function normalizeSummaryBullet(value: string) {
-  return value.replace(/\s+/g, " ").replace(/　/g, " ").trim();
-}
-
-function cleanWorkplaceLabel(value: string) {
-  const normalized = value
-    .replace(/^.*(?:現在|現職|いま|今)/u, "")
-    .replace(/^(?:現在|現職|いま|今)[、,\s]*/u, "")
-    .replace(/^(現在の)?(?:勤務先|所属先|所属|会社|現職)[は:：\s]*/u, "")
-    .replace(/^(?:勤務先|所属先|所属|会社)[は:：]\s*/u, "")
-    .replace(/^.*[、,，]\s*/u, "")
-    .replace(/(?:を経て|をへて).*/u, "")
-    .replace(/^(?:で|に|の)\s*/u, "")
-    .replace(/[。．、,，\s]+$/u, "")
-    .trim();
-
-  const corporateMatch = normalized.match(
-    /((?:株式会社|有限会社|合同会社)[^\s。．、,，]*)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u,
-  );
-
-  if (corporateMatch) {
-    return (corporateMatch[1] ?? corporateMatch[2] ?? "").trim();
-  }
-
-  const organizationMatch = normalized.match(
-    /([^。．、,，\s]+(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|病院|学校))/u,
-  );
-
-  if (organizationMatch) {
-    return organizationMatch[1].trim();
-  }
-
-  return normalized
-    .replace(/[はがを].*$/u, "")
-    .replace(/の(?:管理部|営業部|開発部|人事部|広報部|マーケティング部|主任|部長|課長|マネージャー|代表|社長|取締役).*/u, "")
-    .replace(/[。．、,，\s]+$/u, "")
-    .trim();
-}
-
-function extractCurrentWorkplace(bullets: string[]) {
-  const normalizedBullets = bullets.map(normalizeSummaryBullet).filter(Boolean);
-
-  const contextualPatterns = [
-    /(.+?)に勤務(?:している)?/u,
-    /(.+?)で勤務(?:している)?/u,
-    /(.+?)で(?:[^。．、,，]{0,24}?として)?働(?:いている|く)/u,
-    /(.+?)の[^。．、,，]{0,24}?として働(?:いている|く)/u,
-    /(.+?)に勤め(?:ている)?/u,
-    /(.+?)に所属(?:している)?/u,
-    /(.+?)を経営(?:している)?/u,
-    /(.+?)を運営(?:している)?/u,
-    /(.+?)を主宰(?:している)?/u,
-  ];
-  const directPatterns = [
-    /((?:株式会社|有限会社|合同会社)[^。．、,，]*)/u,
-    /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社)[^。．、,，]*)/u,
-    /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u,
-  ];
-
-  for (const bullet of normalizedBullets) {
-    for (const pattern of contextualPatterns) {
-      const match = bullet.match(pattern);
-      const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
-
-      if (candidate) {
-        return candidate;
-      }
-    }
-  }
-
-  for (const bullet of normalizedBullets) {
-    for (const pattern of directPatterns) {
-      const match = bullet.match(pattern);
-      const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
-
-      if (candidate) {
-        return candidate;
-      }
-    }
-  }
-
-  return null;
-}
-
 function formatDateLabel(value: Date) {
   return `${value.getFullYear()}年${value.getMonth() + 1}月${value.getDate()}日`;
 }
@@ -363,16 +279,10 @@ export async function listProfilesByOwner(ownerUid: string) {
         fullName?: string;
         fullNameKana?: string;
         birthday?: string | null;
+        workplaceTag?: string | null;
         photoUrl?: string | null;
         noteCount?: number;
       };
-
-      const summarySnapshot = await getDoc(doc(db, "profiles", profileDoc.id, "private", "summary"));
-      const summaryData =
-        (summarySnapshot.data() as Partial<Pick<ProfileSummaryDoc, "bullets">> | undefined) ?? {};
-      const summaryBullets = Array.isArray(summaryData.bullets)
-        ? summaryData.bullets.filter((bullet): bullet is string => typeof bullet === "string")
-        : [];
 
       return {
         id: profileDoc.id,
@@ -381,7 +291,7 @@ export async function listProfilesByOwner(ownerUid: string) {
         fullName: data.fullName ?? `${data.lastName ?? ""} ${data.firstName ?? ""}`.trim(),
         fullNameKana: data.fullNameKana ?? "",
         birthday: formatBirthdayForDisplay(data.birthday ?? null),
-        workplace: extractCurrentWorkplace(summaryBullets),
+        workplace: data.workplaceTag?.trim() || null,
         photoUrl: data.photoUrl ?? null,
         noteCount: data.noteCount ?? 0,
       } satisfies ProfileListItem;
@@ -417,30 +327,15 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
     summaryStatus?: ProfileDetail["summaryStatus"];
   };
 
-  const [contactSnapshot, summarySnapshot, noteSnapshot] = await Promise.all([
+  const [contactSnapshot, summarySnapshot] = await Promise.all([
     getDoc(doc(db, "profiles", profileId, "private", "contact")),
     getDoc(doc(db, "profiles", profileId, "private", "summary")),
-    getDocs(collection(db, "profiles", profileId, "notes")),
   ]);
 
   const contactData = (contactSnapshot.data() as Partial<ProfileContact> | undefined) ?? {};
   const summaryData =
     (summarySnapshot.data() as Partial<Pick<ProfileSummaryDoc, "bullets">> | undefined) ?? {};
-  const notes = noteSnapshot.docs
-    .map((noteDoc) => {
-      const noteData = noteDoc.data() as { body?: string; happenedAt?: unknown; createdAt?: unknown };
-      const happenedAtDate = toDate(noteData.happenedAt) ?? toDate(noteData.createdAt) ?? new Date(0);
-
-      return {
-        id: noteDoc.id,
-        body: noteData.body ?? "",
-        happenedAtLabel: formatDateLabel(happenedAtDate),
-        createdAtMillis: happenedAtDate.getTime(),
-      } satisfies ProfileNoteItem;
-    })
-    .sort((left, right) => right.createdAtMillis - left.createdAtMillis);
-
-  const latestNoteDate = toDate(profileData.latestNoteAt) ?? (notes[0] ? new Date(notes[0].createdAtMillis) : null);
+  const latestNoteDate = toDate(profileData.latestNoteAt);
 
   return {
     id: profileSnapshot.id,
@@ -449,7 +344,7 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
     birthday: profileData.birthday ?? "",
     birthdayLabel: formatBirthdayForDisplay(profileData.birthday ?? null),
     photoUrl: profileData.photoUrl ?? null,
-    noteCount: profileData.noteCount ?? notes.length,
+    noteCount: profileData.noteCount ?? 0,
     latestNoteLabel: latestNoteDate ? formatDateLabel(latestNoteDate) : "",
     summaryBullets: Array.isArray(summaryData.bullets)
       ? summaryData.bullets.filter((bullet): bullet is string => typeof bullet === "string")
@@ -464,8 +359,7 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
       instagram: contactData.instagram ?? "",
       linkedin: contactData.linkedin ?? "",
     },
-    notes,
-    } satisfies ProfileDetail;
+  } satisfies ProfileDetail;
 }
 
 export async function addProfileNote(profileId: string, body: string, userUid: string) {

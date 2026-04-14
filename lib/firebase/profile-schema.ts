@@ -7,6 +7,7 @@ export type ProfileDoc = {
   fullName: string;
   fullNameKana: string;
   birthday: string | null;
+  workplaceTag: string | null;
   photoUrl: string | null;
   photoStoragePath: string | null;
   noteCount: number;

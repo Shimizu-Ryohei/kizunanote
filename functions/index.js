@@ -46,6 +46,89 @@ function extractResponseText(responseBody) {
   return texts.join("\n");
 }
 
+function normalizeSummaryBullet(value) {
+  return value.replace(/\s+/g, " ").replace(/　/g, " ").trim();
+}
+
+function cleanWorkplaceLabel(value) {
+  const normalized = value
+    .replace(/^.*(?:現在|現職|いま|今)/u, "")
+    .replace(/^(?:現在|現職|いま|今)[、,\s]*/u, "")
+    .replace(/^(現在の)?(?:勤務先|所属先|所属|会社|現職)[は:：\s]*/u, "")
+    .replace(/^(?:勤務先|所属先|所属|会社)[は:：]\s*/u, "")
+    .replace(/^.*[、,，]\s*/u, "")
+    .replace(/(?:を経て|をへて).*/u, "")
+    .replace(/^(?:で|に|の)\s*/u, "")
+    .replace(/[。．、,，\s]+$/u, "")
+    .trim();
+
+  const corporateMatch = normalized.match(
+    /((?:株式会社|有限会社|合同会社)[^\s。．、,，]*)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
+  );
+
+  if (corporateMatch) {
+    return (corporateMatch[1] ?? corporateMatch[2] ?? "").trim();
+  }
+
+  const organizationMatch = normalized.match(
+    /([^。．、,，\s]+(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|病院|学校))/u
+  );
+
+  if (organizationMatch) {
+    return organizationMatch[1].trim();
+  }
+
+  return normalized
+    .replace(/[はがを].*$/u, "")
+    .replace(/の(?:管理部|営業部|開発部|人事部|広報部|マーケティング部|主任|部長|課長|マネージャー|代表|社長|取締役).*/u, "")
+    .replace(/[。．、,，\s]+$/u, "")
+    .trim();
+}
+
+function extractCurrentWorkplace(bullets) {
+  const normalizedBullets = bullets.map(normalizeSummaryBullet).filter(Boolean);
+  const contextualPatterns = [
+    /(.+?)に勤務(?:している)?/u,
+    /(.+?)で勤務(?:している)?/u,
+    /(.+?)で(?:[^。．、,，]{0,24}?として)?働(?:いている|く)/u,
+    /(.+?)の[^。．、,，]{0,24}?として働(?:いている|く)/u,
+    /(.+?)に勤め(?:ている)?/u,
+    /(.+?)に所属(?:している)?/u,
+    /(.+?)を経営(?:している)?/u,
+    /(.+?)を運営(?:している)?/u,
+    /(.+?)を主宰(?:している)?/u
+  ];
+  const directPatterns = [
+    /((?:株式会社|有限会社|合同会社)[^。．、,，]*)/u,
+    /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社)[^。．、,，]*)/u,
+    /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
+  ];
+
+  for (const bullet of normalizedBullets) {
+    for (const pattern of contextualPatterns) {
+      const match = bullet.match(pattern);
+      const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
+
+      if (candidate) {
+        return candidate;
+      }
+    }
+  }
+
+  for (const bullet of normalizedBullets) {
+    for (const pattern of directPatterns) {
+      const match = bullet.match(pattern);
+      const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
+
+      if (candidate) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
 async function summarizeProfile({ profileId, fullName, existingBullets, updatedNotes }) {
   const payload = {
     model: OPENAI_SUMMARY_MODEL,
@@ -201,6 +284,7 @@ export const summarizeProfilesDaily = onSchedule(
           existingBullets: Array.isArray(summaryData?.bullets) ? summaryData.bullets : [],
           updatedNotes
         });
+        const workplaceTag = extractCurrentWorkplace(bullets);
 
         const now = FieldValue.serverTimestamp();
 
@@ -220,6 +304,7 @@ export const summarizeProfilesDaily = onSchedule(
 
         await profileDoc.ref.update({
           summaryStatus: "ready",
+          workplaceTag: workplaceTag || null,
           lastSummarizedAt: now,
           updatedAt: now
         });
