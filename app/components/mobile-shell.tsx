@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 type MobileShellProps = {
@@ -42,8 +43,8 @@ export function AppHeader() {
       className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[430px] bg-white/95 px-7 pb-3 backdrop-blur"
       style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
     >
-      <Link href="/home" className="inline-block text-[22px] font-black tracking-[0] text-black">
-        キズナノート
+      <Link href="/home" aria-label="キズナノート" className="inline-block">
+        <Image src="/brand/kizunanote-header.svg" alt="キズナノート" width={202} height={44} className="h-[22px] w-auto" priority />
       </Link>
     </header>
   );

@@ -10,6 +10,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "キズナノート",
   description: "大切なつながりを記録するキュレーションノート",
+  icons: {
+    icon: "/brand/kizunanote-favicon.svg",
+    shortcut: "/brand/kizunanote-favicon.svg",
+  },
 };
 
 export default function RootLayout({
