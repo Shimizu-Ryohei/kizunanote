@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource/noto-sans-jp/400.css";
 import "@fontsource/noto-sans-jp/500.css";
 import "@fontsource/noto-sans-jp/700.css";
@@ -14,6 +14,14 @@ export const metadata: Metadata = {
     icon: "/brand/kizunanote-favicon.svg",
     shortcut: "/brand/kizunanote-favicon.svg",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
