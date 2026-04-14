@@ -118,7 +118,7 @@ export default function ProfileNotesScreen({ profileId }: { profileId: string })
         {!isLoading && errorMessage && !profile ? <p className="mt-6 text-[13px] font-medium text-[#d64253]">{errorMessage}</p> : null}
         {profile && headerProfile ? (
           <>
-            <ProfileHeader profile={headerProfile} />
+            <ProfileHeader profile={headerProfile} href={`/profiles/${profileId}`} />
             <section className="mt-8">
               <div className="relative pl-10">
                 <div className="absolute bottom-4 left-[11px] top-5 w-px bg-[#d9d9d9]" />

@@ -230,7 +230,7 @@ function normalizeSummaryBullet(value: string) {
 }
 
 function cleanWorkplaceLabel(value: string) {
-  return value
+  const normalized = value
     .replace(/^.*(?:現在|現職|いま|今)/u, "")
     .replace(/^(?:現在|現職|いま|今)[、,\s]*/u, "")
     .replace(/^(現在の)?(?:勤務先|所属先|所属|会社|現職)[は:：\s]*/u, "")
@@ -238,6 +238,28 @@ function cleanWorkplaceLabel(value: string) {
     .replace(/^.*[、,，]\s*/u, "")
     .replace(/(?:を経て|をへて).*/u, "")
     .replace(/^(?:で|に|の)\s*/u, "")
+    .replace(/[。．、,，\s]+$/u, "")
+    .trim();
+
+  const corporateMatch = normalized.match(
+    /((?:株式会社|有限会社|合同会社)[^\s。．、,，]*)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u,
+  );
+
+  if (corporateMatch) {
+    return (corporateMatch[1] ?? corporateMatch[2] ?? "").trim();
+  }
+
+  const organizationMatch = normalized.match(
+    /([^。．、,，\s]+(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|病院|学校))/u,
+  );
+
+  if (organizationMatch) {
+    return organizationMatch[1].trim();
+  }
+
+  return normalized
+    .replace(/[はがを].*$/u, "")
+    .replace(/の(?:管理部|営業部|開発部|人事部|広報部|マーケティング部|主任|部長|課長|マネージャー|代表|社長|取締役).*/u, "")
     .replace(/[。．、,，\s]+$/u, "")
     .trim();
 }
@@ -259,7 +281,7 @@ function extractCurrentWorkplace(bullets: string[]) {
   const directPatterns = [
     /((?:株式会社|有限会社|合同会社)[^。．、,，]*)/u,
     /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社)[^。．、,，]*)/u,
-    /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u,
+    /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u,
   ];
 
   for (const bullet of normalizedBullets) {

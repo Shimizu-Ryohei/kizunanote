@@ -8,6 +8,8 @@ type ProfileHeaderProps = {
   className?: string;
   editHref?: string;
   editLabel?: string;
+  href?: string;
+  linkLabel?: string;
 };
 
 export default function ProfileHeader({
@@ -16,10 +18,11 @@ export default function ProfileHeader({
   className = "",
   editHref,
   editLabel = "プロフィール基本情報を編集",
+  href,
+  linkLabel = `${profile.name}のプロフィールへ移動`,
 }: ProfileHeaderProps) {
-  return (
-    <section className={`flex items-start justify-between gap-4 ${className}`.trim()}>
-      <div className="flex min-w-0 items-center gap-4">
+  const profileContent = (
+    <div className="flex min-w-0 items-center gap-4">
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ededed] text-[#bdbdbd]"
         style={{ height: avatarSize, width: avatarSize }}
@@ -52,7 +55,18 @@ export default function ProfileHeader({
           Birthday: {profile.birthday}
         </p>
       </div>
-      </div>
+    </div>
+  );
+
+  return (
+    <section className={`flex items-start justify-between gap-4 ${className}`.trim()}>
+      {href ? (
+        <Link href={href} aria-label={linkLabel} className="min-w-0 flex-1">
+          {profileContent}
+        </Link>
+      ) : (
+        profileContent
+      )}
       {editHref ? (
         <Link
           href={editHref}
