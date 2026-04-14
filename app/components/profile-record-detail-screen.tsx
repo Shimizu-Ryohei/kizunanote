@@ -289,10 +289,6 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
           <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
             <ProfileHeader profile={headerProfile} editHref={`/profiles/${profileId}/edit-profile`} />
 
-            <p className="mt-4 text-[14px] font-medium text-[#9f9f9f]">
-              {profile.latestNoteLabel ? `最終コンタクト: ${profile.latestNoteLabel}` : "最終コンタクト: 未登録"}
-            </p>
-
             <section className="mt-4 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
               <h2 className="flex items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
                 <SparklesIcon />
@@ -329,7 +325,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
               <textarea
                 value={noteBody}
                 onChange={(event) => setNoteBody(event.target.value)}
-                placeholder="現在の内容、前回や前後など、このヒトの情報を、なんでもよいので入力してください。"
+                placeholder="会話した内容や、趣味、家族情報などを記入してください…"
                 className="mt-3 min-h-[140px] w-full resize-none rounded-lg bg-white px-4 py-4 text-[14px] font-medium text-black outline-none placeholder:text-[#c0c0c0]"
               />
               {errorMessage && profile ? (

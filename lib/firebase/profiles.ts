@@ -37,6 +37,7 @@ export type ProfileListItem = {
   fullName: string;
   fullNameKana: string;
   birthday: string | null;
+  workplace: string | null;
   photoUrl: string | null;
   noteCount: number;
 };
@@ -224,6 +225,68 @@ function formatBirthdayForDisplay(value: string | null) {
   return `${year}年${Number(month)}月${Number(day)}日`;
 }
 
+function normalizeSummaryBullet(value: string) {
+  return value.replace(/\s+/g, " ").replace(/　/g, " ").trim();
+}
+
+function cleanWorkplaceLabel(value: string) {
+  return value
+    .replace(/^.*(?:現在|現職|いま|今)/u, "")
+    .replace(/^(?:現在|現職|いま|今)[、,\s]*/u, "")
+    .replace(/^(現在の)?(?:勤務先|所属先|所属|会社|現職)[は:：\s]*/u, "")
+    .replace(/^(?:勤務先|所属先|所属|会社)[は:：]\s*/u, "")
+    .replace(/^.*[、,，]\s*/u, "")
+    .replace(/(?:を経て|をへて).*/u, "")
+    .replace(/^(?:で|に|の)\s*/u, "")
+    .replace(/[。．、,，\s]+$/u, "")
+    .trim();
+}
+
+function extractCurrentWorkplace(bullets: string[]) {
+  const normalizedBullets = bullets.map(normalizeSummaryBullet).filter(Boolean);
+
+  const contextualPatterns = [
+    /(.+?)に勤務(?:している)?/u,
+    /(.+?)で勤務(?:している)?/u,
+    /(.+?)で(?:[^。．、,，]{0,24}?として)?働(?:いている|く)/u,
+    /(.+?)の[^。．、,，]{0,24}?として働(?:いている|く)/u,
+    /(.+?)に勤め(?:ている)?/u,
+    /(.+?)に所属(?:している)?/u,
+    /(.+?)を経営(?:している)?/u,
+    /(.+?)を運営(?:している)?/u,
+    /(.+?)を主宰(?:している)?/u,
+  ];
+  const directPatterns = [
+    /((?:株式会社|有限会社|合同会社)[^。．、,，]*)/u,
+    /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社)[^。．、,，]*)/u,
+    /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u,
+  ];
+
+  for (const bullet of normalizedBullets) {
+    for (const pattern of contextualPatterns) {
+      const match = bullet.match(pattern);
+      const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
+
+      if (candidate) {
+        return candidate;
+      }
+    }
+  }
+
+  for (const bullet of normalizedBullets) {
+    for (const pattern of directPatterns) {
+      const match = bullet.match(pattern);
+      const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
+
+      if (candidate) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
 function formatDateLabel(value: Date) {
   return `${value.getFullYear()}年${value.getMonth() + 1}月${value.getDate()}日`;
 }
@@ -270,29 +333,40 @@ export async function listProfilesByOwner(ownerUid: string) {
   const db = firestore;
   const snapshot = await getDocs(query(collection(db, "profiles"), where("ownerUid", "==", ownerUid)));
 
-  return snapshot.docs
-    .map((profileDoc) => {
-    const data = profileDoc.data() as {
-      firstName?: string;
-      lastName?: string;
-      fullName?: string;
-      fullNameKana?: string;
-      birthday?: string | null;
-      photoUrl?: string | null;
-      noteCount?: number;
-    };
+  const items = await Promise.all(
+    snapshot.docs.map(async (profileDoc) => {
+      const data = profileDoc.data() as {
+        firstName?: string;
+        lastName?: string;
+        fullName?: string;
+        fullNameKana?: string;
+        birthday?: string | null;
+        photoUrl?: string | null;
+        noteCount?: number;
+      };
 
-    return {
-      id: profileDoc.id,
-      firstName: data.firstName ?? "",
-      lastName: data.lastName ?? "",
-      fullName: data.fullName ?? `${data.lastName ?? ""} ${data.firstName ?? ""}`.trim(),
-      fullNameKana: data.fullNameKana ?? "",
-      birthday: formatBirthdayForDisplay(data.birthday ?? null),
-      photoUrl: data.photoUrl ?? null,
-      noteCount: data.noteCount ?? 0,
-    } satisfies ProfileListItem;
-    })
+      const summarySnapshot = await getDoc(doc(db, "profiles", profileDoc.id, "private", "summary"));
+      const summaryData =
+        (summarySnapshot.data() as Partial<Pick<ProfileSummaryDoc, "bullets">> | undefined) ?? {};
+      const summaryBullets = Array.isArray(summaryData.bullets)
+        ? summaryData.bullets.filter((bullet): bullet is string => typeof bullet === "string")
+        : [];
+
+      return {
+        id: profileDoc.id,
+        firstName: data.firstName ?? "",
+        lastName: data.lastName ?? "",
+        fullName: data.fullName ?? `${data.lastName ?? ""} ${data.firstName ?? ""}`.trim(),
+        fullNameKana: data.fullNameKana ?? "",
+        birthday: formatBirthdayForDisplay(data.birthday ?? null),
+        workplace: extractCurrentWorkplace(summaryBullets),
+        photoUrl: data.photoUrl ?? null,
+        noteCount: data.noteCount ?? 0,
+      } satisfies ProfileListItem;
+    }),
+  );
+
+  return items
     .sort((left, right) => {
       const kanaCompare = left.fullNameKana.localeCompare(right.fullNameKana, "ja");
 

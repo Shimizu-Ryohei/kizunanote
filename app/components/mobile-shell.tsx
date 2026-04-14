@@ -59,9 +59,10 @@ export function BottomMenu() {
   return (
     <nav
       aria-label="メインメニュー"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto h-[58px] max-w-[430px] border-t border-black/5 bg-white/95 shadow-[0_-10px_28px_rgba(0,0,0,0.04)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-black/5 bg-white/95 shadow-[0_-10px_28px_rgba(0,0,0,0.04)] backdrop-blur"
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0.75rem)" }}
     >
-      <div className="grid h-full grid-cols-3 items-center px-8">
+      <div className="grid h-[58px] grid-cols-3 items-center px-8">
         <Link
           href="/home"
           aria-label="ホーム"
