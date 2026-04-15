@@ -45,6 +45,12 @@ function getGroupLabel(profile: ProfileListItem) {
 
 function LogCard({ profile }: { profile: ProfileListItem }) {
   const tags = [profile.workplace, profile.birthday].filter((tag): tag is string => Boolean(tag));
+  const summaryStatusLabel =
+    profile.summaryStatus === "pending" || profile.summaryStatus === "processing"
+      ? "要約中…"
+      : profile.hasFreshSummaryUpdate
+        ? "要約更新しました"
+        : null;
 
   return (
     <Link href={`/profiles/${profile.id}`} className="block">
@@ -66,8 +72,13 @@ function LogCard({ profile }: { profile: ProfileListItem }) {
           <h2 className="truncate text-[20px] font-black tracking-[0] text-[#252525]">
             {profile.fullName}
           </h2>
-          {tags.length ? (
+          {summaryStatusLabel || tags.length ? (
             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-3">
+              {summaryStatusLabel ? (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-3 py-1 text-[10px] font-black tracking-[0] text-white">
+                  {summaryStatusLabel}
+                </span>
+              ) : null}
               {tags.map((tag) => (
                 <span
                   key={tag}

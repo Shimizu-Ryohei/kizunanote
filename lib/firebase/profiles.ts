@@ -40,6 +40,8 @@ export type ProfileListItem = {
   workplace: string | null;
   photoUrl: string | null;
   noteCount: number;
+  summaryStatus: ProfileDetail["summaryStatus"];
+  hasFreshSummaryUpdate: boolean;
 };
 
 export type ProfileContact = {
@@ -89,6 +91,7 @@ export type ProfileDetail = {
   latestNoteLabel: string;
   summaryBullets: string[];
   summaryStatus: "idle" | "pending" | "processing" | "ready" | "error";
+  hasFreshSummaryUpdate: boolean;
   contacts: ProfileContact;
 };
 
@@ -145,6 +148,7 @@ export async function createProfile({
     latestNoteAt: trimmedNoteBody ? serverTimestamp() : null,
     lastNoteUpdatedAt: trimmedNoteBody ? serverTimestamp() : null,
     lastSummarizedAt: null,
+    summarySeenAt: null,
     summaryStatus: trimmedNoteBody ? "pending" : "idle",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -241,6 +245,46 @@ function toDate(value: unknown) {
   return null;
 }
 
+function getSummaryBadgeExpiresAt(summarizedAt: Date) {
+  return new Date(
+    summarizedAt.getFullYear(),
+    summarizedAt.getMonth(),
+    summarizedAt.getDate() + 2,
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+function hasFreshSummaryUpdate(
+  summaryStatus: ProfileDetail["summaryStatus"],
+  lastSummarizedAt: unknown,
+  summarySeenAt: unknown,
+) {
+  if (summaryStatus !== "ready") {
+    return false;
+  }
+
+  const summarizedAt = toDate(lastSummarizedAt);
+
+  if (!summarizedAt) {
+    return false;
+  }
+
+  if (Date.now() >= getSummaryBadgeExpiresAt(summarizedAt).getTime()) {
+    return false;
+  }
+
+  const seenAt = toDate(summarySeenAt);
+
+  if (seenAt && seenAt.getTime() >= summarizedAt.getTime()) {
+    return false;
+  }
+
+  return true;
+}
+
 async function getOwnedProfileSnapshot(profileId: string, ownerUid: string) {
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
@@ -282,7 +326,12 @@ export async function listProfilesByOwner(ownerUid: string) {
         workplaceTag?: string | null;
         photoUrl?: string | null;
         noteCount?: number;
+        lastSummarizedAt?: unknown;
+        summarySeenAt?: unknown;
+        summaryStatus?: ProfileDetail["summaryStatus"];
       };
+
+      const summaryStatus = data.summaryStatus ?? "idle";
 
       return {
         id: profileDoc.id,
@@ -294,6 +343,12 @@ export async function listProfilesByOwner(ownerUid: string) {
         workplace: data.workplaceTag?.trim() || null,
         photoUrl: data.photoUrl ?? null,
         noteCount: data.noteCount ?? 0,
+        summaryStatus,
+        hasFreshSummaryUpdate: hasFreshSummaryUpdate(
+          summaryStatus,
+          data.lastSummarizedAt ?? null,
+          data.summarySeenAt ?? null,
+        ),
       } satisfies ProfileListItem;
     }),
   );
@@ -324,6 +379,8 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
     photoUrl?: string | null;
     noteCount?: number;
     latestNoteAt?: unknown;
+    lastSummarizedAt?: unknown;
+    summarySeenAt?: unknown;
     summaryStatus?: ProfileDetail["summaryStatus"];
   };
 
@@ -336,6 +393,7 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
   const summaryData =
     (summarySnapshot.data() as Partial<Pick<ProfileSummaryDoc, "bullets">> | undefined) ?? {};
   const latestNoteDate = toDate(profileData.latestNoteAt);
+  const summaryStatus = profileData.summaryStatus ?? "idle";
 
   return {
     id: profileSnapshot.id,
@@ -349,7 +407,12 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
     summaryBullets: Array.isArray(summaryData.bullets)
       ? summaryData.bullets.filter((bullet): bullet is string => typeof bullet === "string")
       : [],
-    summaryStatus: profileData.summaryStatus ?? "idle",
+    summaryStatus,
+    hasFreshSummaryUpdate: hasFreshSummaryUpdate(
+      summaryStatus,
+      profileData.lastSummarizedAt ?? null,
+      profileData.summarySeenAt ?? null,
+    ),
     contacts: {
       phoneCountryCode: contactData.phoneCountryCode ?? "+81",
       phone: contactData.phone ?? "",
@@ -360,6 +423,19 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
       linkedin: contactData.linkedin ?? "",
     },
   } satisfies ProfileDetail;
+}
+
+export async function markProfileSummarySeen(profileId: string, ownerUid: string) {
+  if (!firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+  const db = firestore;
+
+  await getOwnedProfileSnapshot(profileId, ownerUid);
+  await updateDoc(doc(db, "profiles", profileId), {
+    summarySeenAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function addProfileNote(profileId: string, body: string, userUid: string) {

@@ -8,7 +8,12 @@ import PrimaryCta from "./primary-cta";
 import ProfileHeader from "./profile-header";
 import SuccessModal from "./success-modal";
 import { useAuth } from "./auth-provider";
-import { addProfileNote, getProfileDetailById, type ProfileDetail } from "@/lib/firebase/profiles";
+import {
+  addProfileNote,
+  getProfileDetailById,
+  markProfileSummarySeen,
+  type ProfileDetail,
+} from "@/lib/firebase/profiles";
 import type { ProfileHeaderData } from "./profile-content";
 
 function PhoneIcon() {
@@ -152,6 +157,12 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
 
         setProfile(detail);
         setErrorMessage("");
+
+        if (detail.hasFreshSummaryUpdate) {
+          markProfileSummarySeen(profileId, user.uid).catch((error) => {
+            console.error(error);
+          });
+        }
       })
       .catch((error) => {
         console.error(error);
@@ -249,6 +260,8 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
   }, [profile]);
 
   const summaryBullets = profile?.summaryBullets ?? [];
+  const isSummaryPending =
+    profile?.summaryStatus === "pending" || profile?.summaryStatus === "processing";
 
   const handleSaveNote = async () => {
     if (!user) {
@@ -293,6 +306,11 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
               <h2 className="flex items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
                 <SparklesIcon />
                 <span>キズナノート要約</span>
+                {isSummaryPending ? (
+                  <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-main)] px-2 py-1 text-[11px] font-bold leading-none text-white">
+                    要約中…
+                  </span>
+                ) : null}
               </h2>
               {summaryBullets.length ? (
                 <ul className="mt-3 space-y-3 text-[14px] font-medium leading-6 text-[#333]">
@@ -303,7 +321,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                     </li>
                   ))}
                 </ul>
-              ) : profile.summaryStatus === "pending" || profile.summaryStatus === "processing" ? (
+              ) : isSummaryPending ? (
                 <p className="mt-3 text-[14px] font-medium text-[#9f9f9f]">
                   要約は次回の自動更新後に表示されます。
                 </p>

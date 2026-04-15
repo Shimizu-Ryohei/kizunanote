@@ -14,6 +14,7 @@ export type ProfileDoc = {
   latestNoteAt: unknown | null;
   lastNoteUpdatedAt: unknown | null;
   lastSummarizedAt: unknown | null;
+  summarySeenAt: unknown | null;
   summaryStatus: "idle" | "pending" | "processing" | "ready" | "error";
   createdAt: unknown;
   updatedAt: unknown;
