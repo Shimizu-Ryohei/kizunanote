@@ -7,6 +7,7 @@ import MobileShell from "./mobile-shell";
 import PrimaryCta from "./primary-cta";
 import SuccessModal from "./success-modal";
 import { useAuth } from "./auth-provider";
+import { useFuriganaAutofill } from "@/lib/furigana/use-furigana-autofill";
 import { compressImage } from "@/lib/image/compress-image";
 import { getProfileDetailById, updateProfileBasics, type ProfileDetail } from "@/lib/firebase/profiles";
 import type { ProfileHeaderData } from "./profile-content";
@@ -49,6 +50,18 @@ export default function ProfileBasicEditRecordScreen({ profileId }: { profileId:
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const currentYear = new Date().getFullYear();
+  const lastNameKanaAutofill = useFuriganaAutofill({
+    sourceValue: lastName,
+    setSourceValue: setLastName,
+    kanaValue: lastNameKana,
+    setKanaValue: setLastNameKana,
+  });
+  const firstNameKanaAutofill = useFuriganaAutofill({
+    sourceValue: firstName,
+    setSourceValue: setFirstName,
+    kanaValue: firstNameKana,
+    setKanaValue: setFirstNameKana,
+  });
 
   useEffect(() => {
     return () => {
@@ -215,10 +228,10 @@ export default function ProfileBasicEditRecordScreen({ profileId }: { profileId:
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={handlePhotoSelect} />
                 <div className="grid flex-1 grid-cols-2 gap-3">
-                  <FieldLabel><span>姓</span><TextInput value={lastName} onChange={setLastName} /></FieldLabel>
-                  <FieldLabel><span>名</span><TextInput value={firstName} onChange={setFirstName} /></FieldLabel>
-                  <FieldLabel><span>せい</span><TextInput value={lastNameKana} onChange={setLastNameKana} /></FieldLabel>
-                  <FieldLabel><span>めい</span><TextInput value={firstNameKana} onChange={setFirstNameKana} /></FieldLabel>
+                  <FieldLabel><span>姓</span><TextInput value={lastName} onChange={lastNameKanaAutofill.handleSourceChange} /></FieldLabel>
+                  <FieldLabel><span>名</span><TextInput value={firstName} onChange={firstNameKanaAutofill.handleSourceChange} /></FieldLabel>
+                  <FieldLabel><span>せい</span><TextInput value={lastNameKana} onChange={lastNameKanaAutofill.handleKanaChange} /></FieldLabel>
+                  <FieldLabel><span>めい</span><TextInput value={firstNameKana} onChange={firstNameKanaAutofill.handleKanaChange} /></FieldLabel>
                 </div>
               </section>
 

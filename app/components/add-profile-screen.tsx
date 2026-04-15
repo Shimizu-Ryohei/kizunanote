@@ -9,6 +9,7 @@ import { CameraPlusIcon } from "./icons";
 import PrimaryCta from "./primary-cta";
 import SuccessModal from "./success-modal";
 import { createProfile } from "@/lib/firebase/profiles";
+import { useFuriganaAutofill } from "@/lib/furigana/use-furigana-autofill";
 import { compressImage } from "@/lib/image/compress-image";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -55,6 +56,18 @@ export default function AddProfileScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const currentYear = new Date().getFullYear();
+  const lastNameKanaAutofill = useFuriganaAutofill({
+    sourceValue: lastName,
+    setSourceValue: setLastName,
+    kanaValue: lastNameKana,
+    setKanaValue: setLastNameKana,
+  });
+  const firstNameKanaAutofill = useFuriganaAutofill({
+    sourceValue: firstName,
+    setSourceValue: setFirstName,
+    kanaValue: firstNameKana,
+    setKanaValue: setFirstNameKana,
+  });
 
   useEffect(() => {
     return () => {
@@ -191,25 +204,41 @@ export default function AddProfileScreen() {
                   <span>
                     姓 <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="山田" value={lastName} onChange={setLastName} />
+                  <TextInput
+                    placeholder="山田"
+                    value={lastName}
+                    onChange={lastNameKanaAutofill.handleSourceChange}
+                  />
                 </FieldLabel>
                 <FieldLabel>
                   <span>
                     名 <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="太郎" value={firstName} onChange={setFirstName} />
+                  <TextInput
+                    placeholder="太郎"
+                    value={firstName}
+                    onChange={firstNameKanaAutofill.handleSourceChange}
+                  />
                 </FieldLabel>
                 <FieldLabel>
                   <span>
                     せい <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="やまだ" value={lastNameKana} onChange={setLastNameKana} />
+                  <TextInput
+                    placeholder="やまだ"
+                    value={lastNameKana}
+                    onChange={lastNameKanaAutofill.handleKanaChange}
+                  />
                 </FieldLabel>
                 <FieldLabel>
                   <span>
                     めい <span className="text-[#6c6c6c]">（必須）</span>
                   </span>
-                  <TextInput placeholder="たろう" value={firstNameKana} onChange={setFirstNameKana} />
+                  <TextInput
+                    placeholder="たろう"
+                    value={firstNameKana}
+                    onChange={firstNameKanaAutofill.handleKanaChange}
+                  />
                 </FieldLabel>
               </div>
             </section>
