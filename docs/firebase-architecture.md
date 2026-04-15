@@ -44,6 +44,7 @@ Shape:
 type UserDoc = {
   email: string;
   displayName: string;
+  role?: "user" | "admin";
   notificationEnabled: boolean;
   notificationPreferences: {
     pushEnabled: boolean;

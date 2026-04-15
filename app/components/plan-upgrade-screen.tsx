@@ -136,7 +136,6 @@ export default function PlanUpgradeScreen() {
                 "20名までのプロフィール登録",
                 "無制限のキズナノート要約（毎日要約が実行されます）",
                 "勤務先や誕生日などその人を表すタグの表示",
-                "誕生日前の連絡サジェスト等、キズナを積み上げるためのサポート通知",
               ]}
             />
             <PlanCard
@@ -153,7 +152,7 @@ export default function PlanUpgradeScreen() {
               description="Standardのすべての機能に加えて："
               features={[
                 "無制限のプロフィール登録",
-                "スマートフォンの連絡先情報のアップロード機能",
+                "誕生日前の連絡サジェスト等、キズナを積み上げるためのサポート通知",
               ]}
             />
             <PlanCard

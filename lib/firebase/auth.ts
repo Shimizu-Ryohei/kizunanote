@@ -16,6 +16,7 @@ import {
   verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -27,6 +28,16 @@ import {
 } from "firebase/firestore";
 import { deleteObject, listAll, ref } from "firebase/storage";
 import { firebaseAuth, firestore, getFirebaseConfigError, storage } from "./client";
+
+const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
+
+function getUserRole(email?: string | null) {
+  if (!email) {
+    return "user";
+  }
+
+  return ADMIN_EMAILS.has(email.toLowerCase()) ? "admin" : "user";
+}
 
 function ensureFirebaseAuth() {
   if (!firebaseAuth || !firestore) {
@@ -45,6 +56,7 @@ export async function syncUserDocument(user: User) {
     doc(firestore, "users", user.uid),
     {
       email: user.email ?? "",
+      role: getUserRole(user.email),
       updatedAt: serverTimestamp(),
     },
     { merge: true },
@@ -68,6 +80,7 @@ export async function signUpWithEmail(email: string, password: string) {
         updatedAt: serverTimestamp(),
       },
       planId: "standard",
+      role: getUserRole(user.email),
       subscriptionStatus: "free",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -118,6 +131,7 @@ export async function completeSignUpWithEmailLink(
         updatedAt: serverTimestamp(),
       },
       planId: "standard",
+      role: getUserRole(user.email),
       subscriptionStatus: "free",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -226,6 +240,12 @@ export async function deleteCurrentUserAccount(password: string) {
 
   await reauthenticateCurrentUser(password);
 
+  await addDoc(collection(firestore, "users", user.uid, "billingEvents"), {
+    type: "account_deleted",
+    email: user.email,
+    createdAt: serverTimestamp(),
+  });
+
   const profilesSnapshot = await getDocs(
     query(collection(firestore, "profiles"), where("ownerUid", "==", user.uid)),
   );
@@ -240,11 +260,6 @@ export async function deleteCurrentUserAccount(password: string) {
     await deleteDoc(doc(firestore, "profiles", profileDoc.id, "private", "summary"));
     await deleteDoc(profileDoc.ref);
   }
-
-  const billingSnapshot = await getDocs(
-    collection(firestore, "users", user.uid, "billingEvents"),
-  );
-  await Promise.all(billingSnapshot.docs.map((billingDoc) => deleteDoc(billingDoc.ref)));
 
   await deleteDoc(doc(firestore, "users", user.uid));
 

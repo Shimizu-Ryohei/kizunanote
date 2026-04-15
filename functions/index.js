@@ -2,6 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import logger from "firebase-functions/logger";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 
 initializeApp();
@@ -11,6 +12,7 @@ const OPENAI_SUMMARY_MODEL = process.env.OPENAI_SUMMARY_MODEL || "gpt-4o-mini";
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 const MAX_UPDATED_NOTES = 50;
 const MAX_NOTE_BODY_LENGTH = 1200;
+const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
 
 function truncateNoteBody(body) {
   return body.length > MAX_NOTE_BODY_LENGTH ? `${body.slice(0, MAX_NOTE_BODY_LENGTH)}...` : body;
@@ -323,5 +325,86 @@ export const summarizeProfilesDaily = onSchedule(
         });
       }
     }
+  }
+);
+
+function getTokyoMonthRange() {
+  const now = new Date();
+  const tokyoNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  const start = new Date(tokyoNow.getFullYear(), tokyoNow.getMonth(), 1);
+  const end = new Date(tokyoNow.getFullYear(), tokyoNow.getMonth() + 1, 1);
+  return { start, end };
+}
+
+export const getAdminDashboardStats = onCall(
+  {
+    region: "asia-northeast1"
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    const email = request.auth?.token?.email;
+
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    const userSnapshot = await db.doc(`users/${uid}`).get();
+    const userData = userSnapshot.exists ? userSnapshot.data() : {};
+    const isAdmin = userData?.role === "admin" || (email && ADMIN_EMAILS.has(email.toLowerCase()));
+
+    if (!isAdmin) {
+      throw new HttpsError("permission-denied", "管理者のみアクセスできます。");
+    }
+
+    const { start, end } = getTokyoMonthRange();
+    const usersSnapshot = await db.collection("users").get();
+
+    let totalUsers = 0;
+    let currentMonthNewUsers = 0;
+    const planCounts = {
+      standard: 0,
+      plus: 0,
+      pro: 0
+    };
+
+    for (const userDoc of usersSnapshot.docs) {
+      totalUsers += 1;
+      const data = userDoc.data();
+      const rawPlanId =
+        typeof data.planId === "string" ? data.planId.trim().toLowerCase() : "standard";
+      const normalizedPlanId =
+        rawPlanId === "standard" || rawPlanId === "plus" || rawPlanId === "pro"
+          ? rawPlanId
+          : "standard";
+      planCounts[normalizedPlanId] += 1;
+
+      const createdAt = data.createdAt?.toDate?.();
+      if (createdAt && createdAt >= start && createdAt < end) {
+        currentMonthNewUsers += 1;
+      }
+    }
+
+    const cancellationEventsSnapshot = await db.collectionGroup("billingEvents").get();
+    let currentMonthCanceledUsers = 0;
+
+    for (const eventDoc of cancellationEventsSnapshot.docs) {
+      const data = eventDoc.data();
+
+      if (data.type !== "account_deleted") {
+        continue;
+      }
+
+      const createdAt = data.createdAt?.toDate?.();
+      if (createdAt && createdAt >= start && createdAt < end) {
+        currentMonthCanceledUsers += 1;
+      }
+    }
+
+    return {
+      totalUsers,
+      planCounts,
+      currentMonthNewUsers,
+      currentMonthCanceledUsers
+    };
   }
 );
