@@ -308,7 +308,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                 <span>キズナノート要約</span>
                 {isSummaryPending ? (
                   <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-main)] px-2 py-1 text-[11px] font-bold leading-none text-white">
-                    要約中…
+                    要約中…明朝5:00頃完了します
                   </span>
                 ) : null}
               </h2>

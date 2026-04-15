@@ -62,6 +62,11 @@ export async function signUpWithEmail(email: string, password: string) {
       email: user.email,
       displayName: "",
       notificationEnabled: true,
+      notificationPreferences: {
+        pushEnabled: true,
+        emailEnabled: false,
+        updatedAt: serverTimestamp(),
+      },
       subscriptionStatus: "free",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -106,6 +111,11 @@ export async function completeSignUpWithEmailLink(
       email: user.email,
       displayName: "",
       notificationEnabled: true,
+      notificationPreferences: {
+        pushEnabled: true,
+        emailEnabled: false,
+        updatedAt: serverTimestamp(),
+      },
       subscriptionStatus: "free",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

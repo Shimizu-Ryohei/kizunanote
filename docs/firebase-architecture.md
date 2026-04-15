@@ -45,6 +45,11 @@ type UserDoc = {
   email: string;
   displayName: string;
   notificationEnabled: boolean;
+  notificationPreferences: {
+    pushEnabled: boolean;
+    emailEnabled: boolean;
+    updatedAt: Timestamp;
+  };
   createdAt: Timestamp;
   updatedAt: Timestamp;
   subscriptionStatus: "free" | "trialing" | "active" | "past_due" | "canceled";

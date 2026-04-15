@@ -1,27 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MobileShell from "./mobile-shell";
+import { useAuth } from "./auth-provider";
+import {
+  getNotificationSettings,
+  updateNotificationSettings,
+  type NotificationSettings,
+} from "@/lib/firebase/notification-settings";
 
 function NotificationToggle({
   label,
-  defaultEnabled,
+  enabled,
   note,
+  onToggle,
+  disabled,
 }: {
   label: string;
-  defaultEnabled: boolean;
+  enabled: boolean;
   note?: string;
+  onToggle: () => void;
+  disabled?: boolean;
 }) {
-  const [enabled, setEnabled] = useState(defaultEnabled);
-
   return (
     <button
       type="button"
-      onClick={() => setEnabled((current) => !current)}
-      className="flex min-h-[52px] w-full items-center rounded-[14px] bg-white px-5 py-3 text-left text-[14px] font-medium text-[#2f2f2f] shadow-[0_1px_0_rgba(0,0,0,0.01)]"
-    >
-      <span className="flex-1">
-        <span className="block text-[14px] font-medium leading-none">{label}</span>
+      onClick={onToggle}
+      disabled={disabled}
+      className={`flex min-h-[52px] w-full items-center rounded-[14px] bg-white px-5 py-3 text-left text-[14px] font-medium text-[#2f2f2f] shadow-[0_1px_0_rgba(0,0,0,0.01)] ${
+        disabled ? "opacity-60" : ""
+      }`}
+      >
+        <span className="flex-1">
+          <span className="block text-[14px] font-medium leading-none">{label}</span>
         {note ? (
           <span className="mt-2 block pr-4 text-[11px] leading-4 font-medium text-[#b0b0b0]">
             {note}
@@ -44,18 +55,100 @@ function NotificationToggle({
 }
 
 export default function NotificationSettingsScreen() {
+  const { user } = useAuth();
+  const [settings, setSettings] = useState<NotificationSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let isMounted = true;
+
+    getNotificationSettings(user.uid)
+      .then((nextSettings) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setSettings(nextSettings);
+        setErrorMessage("");
+      })
+      .catch((error) => {
+        console.error(error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setErrorMessage("通知設定の取得に失敗しました。");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const handleToggle = async (key: keyof NotificationSettings) => {
+    if (!user || isSaving || !settings) {
+      return;
+    }
+
+    const nextSettings = {
+      ...settings,
+      [key]: !settings[key],
+    };
+
+    setSettings(nextSettings);
+    setIsSaving(true);
+    setErrorMessage("");
+
+    try {
+      await updateNotificationSettings(user.uid, nextSettings);
+    } catch (error) {
+      console.error(error);
+      setSettings(settings);
+      setErrorMessage("通知設定の保存に失敗しました。");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <MobileShell>
       <main className="px-4 pb-28">
         <section className="mt-2">
-          <div className="space-y-3">
-            <NotificationToggle
-              label="プッシュ通知"
-              defaultEnabled
-              note="ホーム画面にWEBアプリとして追加するとプッシュ通知を受け取ることができます"
-            />
-            <NotificationToggle label="メール通知" defaultEnabled={false} />
-          </div>
+          {isLoading ? (
+            <p className="mb-4 text-[13px] font-medium text-[#8b8b8b]">通知設定を読み込み中...</p>
+          ) : null}
+          {errorMessage ? (
+            <p className="mb-4 text-[13px] font-medium text-[#d64253]">{errorMessage}</p>
+          ) : null}
+          {settings ? (
+            <div className="space-y-3">
+              <NotificationToggle
+                label="プッシュ通知"
+                enabled={settings.pushEnabled}
+                onToggle={() => handleToggle("pushEnabled")}
+                disabled={isSaving}
+                note="ホーム画面にWEBアプリとして追加するとプッシュ通知を受け取ることができます"
+              />
+              <NotificationToggle
+                label="メール通知"
+                enabled={settings.emailEnabled}
+                onToggle={() => handleToggle("emailEnabled")}
+                disabled={isSaving}
+              />
+            </div>
+          ) : null}
         </section>
       </main>
     </MobileShell>
