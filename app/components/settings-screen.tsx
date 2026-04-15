@@ -50,9 +50,11 @@ export default function SettingsScreen() {
       <main className="px-4 pb-28">
         <section className="mt-2">
           <div className="space-y-3">
+            <SettingRow label="プランアップグレード" href="/settings/upgrade" />
             <SettingRow label="ログインID変更" href="/settings/change-login-id" />
             <SettingRow label="パスワード変更" href="/settings/change-password" />
             <SettingRow label="通知設定" href="/settings/notifications" />
+            <SettingRow label="よくある質問" href="/settings/faq" />
             <SettingRow label="利用規約等" href="/settings/legal" />
           </div>
         </section>

@@ -50,6 +50,7 @@ type UserDoc = {
     emailEnabled: boolean;
     updatedAt: Timestamp;
   };
+  planId: "standard" | "plus" | "pro";
   createdAt: Timestamp;
   updatedAt: Timestamp;
   subscriptionStatus: "free" | "trialing" | "active" | "past_due" | "canceled";
