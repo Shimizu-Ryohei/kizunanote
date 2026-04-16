@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
 import MobileShell from "./mobile-shell";
 import {
+  getAdminContactInquiries,
   getAdminDashboardStats,
+  type AdminContactInquiry,
   getCurrentUserRole,
   type AdminDashboardStats,
 } from "@/lib/firebase/admin";
@@ -32,6 +34,7 @@ export default function AdminScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
+  const [contactInquiries, setContactInquiries] = useState<AdminContactInquiry[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -51,13 +54,14 @@ export default function AdminScreen() {
           return;
         }
 
-        return getAdminDashboardStats()
-          .then((nextStats) => {
+        return Promise.all([getAdminDashboardStats(), getAdminContactInquiries()])
+          .then(([nextStats, nextInquiries]) => {
             if (!isMounted) {
               return;
             }
 
             setStats(nextStats);
+            setContactInquiries(nextInquiries);
             setErrorMessage("");
           })
           .catch((error) => {
@@ -149,6 +153,38 @@ export default function AdminScreen() {
             <StatCard label="今月の解約ユーザー数" value={stats.currentMonthCanceledUsers} />
           </section>
         ) : null}
+
+        <section className="mt-6 rounded-[18px] bg-white px-5 py-5 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
+          <h2 className="text-[16px] font-black text-[#1f1f1f]">お問い合わせ一覧</h2>
+          {contactInquiries.length ? (
+            <div className="mt-4 space-y-4">
+              {contactInquiries.map((inquiry) => (
+                <article key={inquiry.id} className="rounded-[14px] bg-[#f7f7f7] px-4 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-black text-[#1f1f1f]">
+                        {inquiry.subject}
+                      </p>
+                      <p className="mt-1 truncate text-[12px] font-medium text-[#6a6a6a]">
+                        {inquiry.email}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[11px] font-medium text-[#8a8a8a]">
+                      {inquiry.createdAtLabel}
+                    </p>
+                  </div>
+                  <p className="mt-3 whitespace-pre-wrap text-[13px] font-medium leading-6 text-[#4a4a4a]">
+                    {inquiry.message}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-[13px] font-medium text-[#7a7a7a]">
+              まだお問い合わせはありません。
+            </p>
+          )}
+        </section>
       </main>
     </MobileShell>
   );

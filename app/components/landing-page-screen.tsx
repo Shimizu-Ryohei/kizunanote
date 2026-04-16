@@ -133,6 +133,21 @@ export default function LandingPageScreen() {
             新規登録へ進む
           </Link>
         </section>
+
+        <section className="px-5 pb-10 pt-6 text-center">
+          <Link
+            href="/legal"
+            className="mx-auto block w-fit text-[11px] font-medium leading-none text-[#8a8a8a] underline"
+          >
+            利用規約等
+          </Link>
+          <Link
+            href="/contact"
+            className="mx-auto mt-4 block w-fit text-[11px] font-medium leading-none text-[#8a8a8a] underline"
+          >
+            お問い合わせはこちら
+          </Link>
+        </section>
       </div>
     </main>
   );

@@ -4,7 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./auth-provider";
 
-const PUBLIC_PATH_PREFIXES = ["/lp", "/sign-in", "/sign-up"];
+const GUEST_ONLY_PATH_PREFIXES = ["/lp", "/sign-in", "/sign-up"];
+const PUBLIC_PATH_PREFIXES = [...GUEST_ONLY_PATH_PREFIXES, "/contact", "/legal"];
 const UNGUARDED_PATH_PREFIXES = [
   "/settings/change-login-id/complete",
   "/settings/change-password/reset/complete",
@@ -17,6 +18,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    const isGuestOnlyPath = GUEST_ONLY_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
     const isUnguardedPath = UNGUARDED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
     if (isLoading) {
@@ -32,12 +34,13 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user && isPublicPath) {
+    if (user && isGuestOnlyPath) {
       router.replace("/home");
     }
   }, [isLoading, pathname, router, user]);
 
   const isPublicPath = PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isGuestOnlyPath = GUEST_ONLY_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   const isUnguardedPath = UNGUARDED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   if (isLoading) {
@@ -56,7 +59,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     return null;
   }
 
-  if (user && isPublicPath) {
+  if (user && isGuestOnlyPath) {
     return null;
   }
 

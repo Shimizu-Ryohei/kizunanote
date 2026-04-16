@@ -77,6 +77,13 @@ export default function SettingsScreen() {
           >
             アカウントを削除する
           </Link>
+          <Link
+            href="/contact"
+            className="mx-auto mt-4 block w-fit text-center text-[10px] leading-none font-medium text-[#b5b5b5] underline"
+            style={{ fontSize: "10px", lineHeight: 1 }}
+          >
+            お問い合わせはこちら
+          </Link>
         </section>
       </main>
     </MobileShell>

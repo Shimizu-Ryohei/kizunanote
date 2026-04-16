@@ -21,6 +21,15 @@ export type AdminDashboardStats = {
   currentMonthCanceledUsers: number;
 };
 
+export type AdminContactInquiry = {
+  id: string;
+  userUid: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAtLabel: string;
+};
+
 export function isAdminEmail(email?: string | null) {
   return Boolean(email && ADMIN_EMAILS.has(email.toLowerCase()));
 }
@@ -47,6 +56,19 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   const callable = httpsCallable<undefined, AdminDashboardStats>(
     firebaseFunctions,
     "getAdminDashboardStats",
+  );
+  const result = await callable();
+  return result.data;
+}
+
+export async function getAdminContactInquiries(): Promise<AdminContactInquiry[]> {
+  if (!firebaseFunctions) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  const callable = httpsCallable<undefined, AdminContactInquiry[]>(
+    firebaseFunctions,
+    "getAdminContactInquiries",
   );
   const result = await callable();
   return result.data;

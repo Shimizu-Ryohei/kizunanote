@@ -408,3 +408,82 @@ export const getAdminDashboardStats = onCall(
     };
   }
 );
+
+export const submitContactInquiry = onCall(
+  {
+    region: "asia-northeast1"
+  },
+  async (request) => {
+    const uid = request.auth?.uid || null;
+    const authEmail = request.auth?.token?.email;
+    const email =
+      typeof request.data?.email === "string" && request.data.email.trim()
+        ? request.data.email.trim()
+        : authEmail || "";
+    const subject =
+      typeof request.data?.subject === "string" ? request.data.subject.trim() : "";
+    const message =
+      typeof request.data?.message === "string" ? request.data.message.trim() : "";
+
+    if (!email || !subject || !message) {
+      throw new HttpsError(
+        "invalid-argument",
+        "メールアドレス、件名、お問い合わせ内容を入力してください。"
+      );
+    }
+
+    await db.collection("contactInquiries").add({
+      userUid: uid,
+      email,
+      subject,
+      message,
+      createdAt: FieldValue.serverTimestamp()
+    });
+
+    return { ok: true };
+  }
+);
+
+export const getAdminContactInquiries = onCall(
+  {
+    region: "asia-northeast1"
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    const email = request.auth?.token?.email;
+
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    const userSnapshot = await db.doc(`users/${uid}`).get();
+    const userData = userSnapshot.exists ? userSnapshot.data() : {};
+    const isAdmin = userData?.role === "admin" || (email && ADMIN_EMAILS.has(email.toLowerCase()));
+
+    if (!isAdmin) {
+      throw new HttpsError("permission-denied", "管理者のみアクセスできます。");
+    }
+
+    const inquiriesSnapshot = await db
+      .collection("contactInquiries")
+      .orderBy("createdAt", "desc")
+      .limit(100)
+      .get();
+
+    return inquiriesSnapshot.docs.map((inquiryDoc) => {
+      const data = inquiryDoc.data();
+      const createdAt = data.createdAt?.toDate?.();
+
+      return {
+        id: inquiryDoc.id,
+        userUid: String(data.userUid || ""),
+        email: String(data.email || ""),
+        subject: String(data.subject || ""),
+        message: String(data.message || ""),
+        createdAtLabel: createdAt
+          ? createdAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })
+          : ""
+      };
+    });
+  }
+);
