@@ -40,11 +40,21 @@ function StepCard({
 
 export default function LandingPageScreen() {
   return (
-    <main className="min-h-screen bg-[#f7f9fc] px-5 py-6 sm:px-8">
+    <main className="min-h-screen bg-[#f7f9fc] px-0 py-0 sm:px-0">
       <div className="mx-auto max-w-[430px]">
+        <header className="flex h-[68px] items-center justify-between bg-white px-5">
+          <span className="text-[22px] font-black text-black">キズナノート</span>
+          <Link
+            href="/sign-up"
+            className="inline-flex h-[38px] items-center justify-center rounded-full bg-[var(--color-main)] px-4 text-[12px] font-black text-white"
+          >
+            新規登録する
+          </Link>
+        </header>
+
         <section>
           <Image
-            src="/brand/lp-hero.png"
+            src="/brand/lp-hero-v2.png"
             alt="キズナノートの利用イメージ"
             width={1366}
             height={768}
@@ -53,7 +63,7 @@ export default function LandingPageScreen() {
           />
         </section>
 
-        <section className="mt-4 space-y-3">
+        <section className="mt-4 space-y-3 px-5">
           <Link
             href="/sign-up"
             className="flex h-[56px] w-full items-center justify-center rounded-full bg-[var(--color-main)] text-[15px] font-black text-white shadow-[0_12px_28px_rgba(48,124,255,0.2)]"
@@ -68,7 +78,7 @@ export default function LandingPageScreen() {
           </Link>
         </section>
 
-        <section className="mt-5 space-y-4">
+        <section className="mt-5 space-y-4 px-5">
           <FeatureCard
             title="相手のことを自然に思い出せる"
             description="キズナノートに会話内容や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。"
@@ -83,7 +93,7 @@ export default function LandingPageScreen() {
           />
         </section>
 
-        <section className="mt-8">
+        <section className="mt-8 px-5">
           <h2 className="text-[18px] font-black text-[#1f1f1f]">はじめ方</h2>
           <div className="mt-4 space-y-3">
             <StepCard
@@ -104,7 +114,7 @@ export default function LandingPageScreen() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-[28px] bg-white px-6 py-6 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
+        <section className="mx-5 mt-8 rounded-[28px] bg-white px-6 py-6 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
           <h2 className="text-[18px] font-black text-[#1f1f1f]">まずは無料で始める</h2>
           <p className="mt-3 text-[13px] font-medium leading-7 text-[#676767]">
             Standardプランでは20名までのプロフィール登録と、毎日の要約機能を無料で利用できます。
