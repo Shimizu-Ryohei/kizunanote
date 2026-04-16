@@ -132,6 +132,12 @@ export default function LandingPageScreen() {
           >
             新規登録へ進む
           </Link>
+          <Link
+            href="/plans"
+            className="mx-auto mt-4 block w-fit text-[12px] font-bold leading-none text-[var(--color-main)] underline"
+          >
+            料金プランを見る
+          </Link>
         </section>
 
         <section className="px-5 pb-10 pt-6 text-center">

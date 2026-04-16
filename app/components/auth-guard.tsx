@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./auth-provider";
 
 const GUEST_ONLY_PATH_PREFIXES = ["/lp", "/sign-in", "/sign-up"];
-const PUBLIC_PATH_PREFIXES = [...GUEST_ONLY_PATH_PREFIXES, "/contact", "/legal"];
+const PUBLIC_PATH_PREFIXES = [...GUEST_ONLY_PATH_PREFIXES, "/contact", "/legal", "/plans"];
 const UNGUARDED_PATH_PREFIXES = [
   "/settings/change-login-id/complete",
   "/settings/change-password/reset/complete",
