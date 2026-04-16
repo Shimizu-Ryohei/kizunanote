@@ -43,7 +43,14 @@ export default function LandingPageScreen() {
     <main className="min-h-screen bg-[#f7f9fc] px-0 py-0 sm:px-0">
       <div className="mx-auto max-w-[430px]">
         <header className="flex h-[68px] items-center justify-between bg-white px-5">
-          <span className="text-[22px] font-black text-black">キズナノート</span>
+          <Image
+            src="/brand/kizunanote-header.svg"
+            alt="キズナノート"
+            width={202}
+            height={44}
+            className="h-[22px] w-auto"
+            priority
+          />
           <Link
             href="/sign-up"
             className="inline-flex h-[38px] items-center justify-center rounded-full bg-[var(--color-main)] px-4 text-[12px] font-black text-white"
