@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./auth-provider";
 
-const PUBLIC_PATH_PREFIXES = ["/sign-in", "/sign-up"];
+const PUBLIC_PATH_PREFIXES = ["/lp", "/sign-in", "/sign-up"];
 const UNGUARDED_PATH_PREFIXES = [
   "/settings/change-login-id/complete",
   "/settings/change-password/reset/complete",
