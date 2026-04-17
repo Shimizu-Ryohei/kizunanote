@@ -12,8 +12,9 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { firebaseAuth, firestore, getFirebaseConfigError, storage } from "./client";
+import { firebaseAuth, firebaseFunctions, firestore, getFirebaseConfigError, storage } from "./client";
 import type {
   KizunaNoteDoc,
   ProfileContactDoc,
@@ -486,6 +487,20 @@ export async function addProfileNote(profileId: string, body: string, userUid: s
     summaryStatus: "pending",
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function summarizeProfileImmediately(profileId: string) {
+  if (!firebaseFunctions) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  const callable = httpsCallable<
+    { profileId: string },
+    { status: "updated" | "already_latest" | "processing" }
+  >(firebaseFunctions, "summarizeProfileNow");
+
+  const result = await callable({ profileId });
+  return result.data;
 }
 
 export async function listProfileNotes(profileId: string, ownerUid: string) {

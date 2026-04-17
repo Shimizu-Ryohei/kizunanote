@@ -4,11 +4,13 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
 type UpgradeRequiredModalProps = {
+  description?: string;
   onCancel: () => void;
   onViewPlans: () => void;
 };
 
 export default function UpgradeRequiredModal({
+  description = "Standardプランではプロフィール登録は20名までです。21人目以降を登録するにはプランのアップグレードが必要です。",
   onCancel,
   onViewPlans,
 }: UpgradeRequiredModalProps) {
@@ -31,7 +33,7 @@ export default function UpgradeRequiredModal({
         <div className="w-full rounded-[24px] bg-white px-6 pb-6 pt-7 text-center shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
           <p className="text-[19px] font-black text-black">プランのアップグレードが必要です</p>
           <p className="mt-3 text-[13px] font-medium leading-6 text-[#6f6f6f]">
-            Standardプランではプロフィール登録は20名までです。21人目以降を登録するにはプランのアップグレードが必要です。
+            {description}
           </p>
           <div className="mt-7 grid grid-cols-2 gap-3">
             <button

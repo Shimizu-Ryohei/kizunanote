@@ -2,18 +2,22 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import MobileShell from "./mobile-shell";
 import PrimaryCta from "./primary-cta";
 import ProfileHeader from "./profile-header";
 import SuccessModal from "./success-modal";
+import UpgradeRequiredModal from "./upgrade-required-modal";
 import { useAuth } from "./auth-provider";
 import {
   addProfileNote,
   getProfileDetailById,
   markProfileSummarySeen,
+  summarizeProfileImmediately,
   type ProfileDetail,
 } from "@/lib/firebase/profiles";
+import { getCurrentPlan } from "@/lib/firebase/subscription";
 import type { ProfileHeaderData } from "./profile-content";
 
 function PhoneIcon() {
@@ -118,6 +122,20 @@ function SparklesIcon() {
   );
 }
 
+function RefreshIcon() {
+  return (
+    <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ContactCard({
   icon,
   value,
@@ -148,6 +166,7 @@ function ContactCard({
 }
 
 export default function ProfileRecordDetailScreen({ profileId }: { profileId: string }) {
+  const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<ProfileDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,6 +174,9 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
   const [noteBody, setNoteBody] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [isSummaryRefreshing, setIsSummaryRefreshing] = useState(false);
+  const [isSummaryLatestModalOpen, setIsSummaryLatestModalOpen] = useState(false);
+  const [isUpgradeRequiredModalOpen, setIsUpgradeRequiredModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -316,6 +338,36 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
     }
   };
 
+  const handleSummarizeNow = async () => {
+    if (!user) {
+      setErrorMessage("ログイン状態を確認できませんでした。");
+      return;
+    }
+
+    try {
+      const currentPlan = await getCurrentPlan(user.uid);
+      if (currentPlan !== "pro") {
+        setIsUpgradeRequiredModalOpen(true);
+        return;
+      }
+
+      setIsSummaryRefreshing(true);
+      const result = await summarizeProfileImmediately(profileId);
+      const refreshed = await getProfileDetailById(profileId, user.uid);
+      setProfile(refreshed);
+      setErrorMessage("");
+
+      if (result.status === "already_latest") {
+        setIsSummaryLatestModalOpen(true);
+      }
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("要約の実行に失敗しました。");
+    } finally {
+      setIsSummaryRefreshing(false);
+    }
+  };
+
   return (
     <MobileShell>
       <main className="px-4 pb-28">
@@ -325,19 +377,45 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         ) : null}
 
         {profile && headerProfile ? (
-          <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
+          <div
+            className={
+              isSavedModalOpen || isSummaryLatestModalOpen || isUpgradeRequiredModalOpen
+                ? "pointer-events-none blur-md"
+                : ""
+            }
+          >
             <ProfileHeader profile={headerProfile} editHref={`/profiles/${profileId}/edit-profile`} />
 
             <section className="mt-4 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
-              <h2 className="flex items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
-                <SparklesIcon />
-                <span>キズナノート要約</span>
-                {isSummaryPending ? (
-                  <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-main)] px-2 py-1 text-[11px] font-bold leading-none text-white">
-                    要約中…明朝5:00頃完了します
-                  </span>
-                ) : null}
-              </h2>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="flex items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
+                    <SparklesIcon />
+                    <span>キズナノート要約</span>
+                    <button
+                      type="button"
+                      onClick={handleSummarizeNow}
+                      disabled={isSummaryRefreshing}
+                      className={`m-0 inline-flex shrink-0 appearance-none items-center rounded-full border-0 bg-[var(--color-sub)] px-2 py-2 shadow-none ${
+                        isSummaryRefreshing ? "opacity-70" : ""
+                      }`}
+                      aria-label="今すぐ要約する"
+                      title="今すぐ要約する"
+                    >
+                      <span className="text-[var(--color-main)]">
+                        <RefreshIcon />
+                      </span>
+                    </button>
+                  </h2>
+                  {isSummaryPending ? (
+                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-3">
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-3 py-1 text-[10px] font-black tracking-[0] text-white">
+                        要約中…明朝5:00頃完了します
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
               {summaryBullets.length ? (
                 <ul className="mt-3 space-y-3 text-[14px] font-medium leading-6 text-[#333]">
                   {summaryBullets.map((bullet, index) => (
@@ -409,6 +487,19 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         ) : null}
 
         {isSavedModalOpen ? <SuccessModal onConfirm={() => setIsSavedModalOpen(false)} /> : null}
+        {isSummaryLatestModalOpen ? (
+          <SuccessModal
+            message="現在の要約は最新です"
+            onConfirm={() => setIsSummaryLatestModalOpen(false)}
+          />
+        ) : null}
+        {isUpgradeRequiredModalOpen ? (
+          <UpgradeRequiredModal
+            description="今すぐ要約する機能はProプランでご利用いただけます。プランをアップグレードすると、このプロフィールの要約をすぐに更新できます。"
+            onCancel={() => setIsUpgradeRequiredModalOpen(false)}
+            onViewPlans={() => router.push("/settings/upgrade")}
+          />
+        ) : null}
       </main>
     </MobileShell>
   );

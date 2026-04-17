@@ -49,16 +49,35 @@ function ensureFirebaseAuth() {
 
 export const PENDING_SIGN_UP_EMAIL_KEY = "kizunanote_pending_sign_up_email";
 
+function buildUserDocumentPayload(user: User, includeCreatedAt = false) {
+  const payload: Record<string, unknown> = {
+    email: user.email ?? "",
+    displayName: "",
+    notificationEnabled: true,
+    notificationPreferences: {
+      pushEnabled: true,
+      emailEnabled: false,
+      updatedAt: serverTimestamp(),
+    },
+    planId: "standard",
+    role: getUserRole(user.email),
+    subscriptionStatus: "free",
+    updatedAt: serverTimestamp(),
+  };
+
+  if (includeCreatedAt) {
+    payload.createdAt = serverTimestamp();
+  }
+
+  return payload;
+}
+
 export async function syncUserDocument(user: User) {
   const { firestore } = ensureFirebaseAuth();
 
   await setDoc(
     doc(firestore, "users", user.uid),
-    {
-      email: user.email ?? "",
-      role: getUserRole(user.email),
-      updatedAt: serverTimestamp(),
-    },
+    buildUserDocumentPayload(user),
     { merge: true },
   );
 }
@@ -70,21 +89,7 @@ export async function signUpWithEmail(email: string, password: string) {
 
   await setDoc(
     doc(firestore, "users", user.uid),
-    {
-      email: user.email,
-      displayName: "",
-      notificationEnabled: true,
-      notificationPreferences: {
-        pushEnabled: true,
-        emailEnabled: false,
-        updatedAt: serverTimestamp(),
-      },
-      planId: "standard",
-      role: getUserRole(user.email),
-      subscriptionStatus: "free",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
+    buildUserDocumentPayload(user, true),
     { merge: true },
   );
 
@@ -121,21 +126,7 @@ export async function completeSignUpWithEmailLink(
 
   await setDoc(
     doc(firestore, "users", user.uid),
-    {
-      email: user.email,
-      displayName: "",
-      notificationEnabled: true,
-      notificationPreferences: {
-        pushEnabled: true,
-        emailEnabled: false,
-        updatedAt: serverTimestamp(),
-      },
-      planId: "standard",
-      role: getUserRole(user.email),
-      subscriptionStatus: "free",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
+    buildUserDocumentPayload(user, true),
     { merge: true },
   );
 

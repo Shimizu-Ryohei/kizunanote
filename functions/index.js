@@ -564,6 +564,90 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
     .slice(0, 5);
 }
 
+async function getUpdatedNotesForSummary(profileId, lastSummarizedAt) {
+  let notesQuery = db.collection(`profiles/${profileId}/notes`).orderBy("updatedAt", "desc");
+
+  if (lastSummarizedAt) {
+    notesQuery = notesQuery.where("updatedAt", ">", lastSummarizedAt);
+  }
+
+  const updatedNotesSnapshot = await notesQuery.limit(MAX_UPDATED_NOTES).get();
+
+  return updatedNotesSnapshot.docs
+    .map((noteDoc) => {
+      const noteData = noteDoc.data();
+
+      return {
+        id: noteDoc.id,
+        body: truncateNoteBody(String(noteData.body || "")),
+        updatedAt: noteData.updatedAt || noteData.createdAt || null
+      };
+    })
+    .filter((note) => note.body);
+}
+
+async function runProfileSummary(profileDoc) {
+  const profileId = profileDoc.id;
+  const profileData = profileDoc.data();
+  const summaryRef = db.doc(`profiles/${profileId}/private/summary`);
+
+  await profileDoc.ref.update({
+    summaryStatus: "processing",
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  const summarySnapshot = await summaryRef.get();
+  const summaryData = summarySnapshot.exists ? summarySnapshot.data() : {};
+  const lastSummarizedAt = summaryData?.lastSummarizedAt || null;
+  const updatedNotes = await getUpdatedNotesForSummary(profileId, lastSummarizedAt);
+  const hasExistingBullets = Array.isArray(summaryData?.bullets) && summaryData.bullets.length > 0;
+
+  if (!updatedNotes.length) {
+    await profileDoc.ref.update({
+      summaryStatus: hasExistingBullets ? "ready" : "idle",
+      updatedAt: FieldValue.serverTimestamp()
+    });
+
+    return {
+      status: "already_latest"
+    };
+  }
+
+  const bullets = await summarizeProfile({
+    profileId,
+    fullName: String(profileData.fullName || ""),
+    existingBullets: Array.isArray(summaryData?.bullets) ? summaryData.bullets : [],
+    updatedNotes
+  });
+  const workplaceTag = extractCurrentWorkplace(bullets);
+  const now = FieldValue.serverTimestamp();
+
+  await summaryRef.set(
+    {
+      ownerUid: String(profileData.ownerUid || ""),
+      bullets,
+      sourceNoteCount: Number(profileData.noteCount || 0),
+      lastNoteUpdatedAt: profileData.lastNoteUpdatedAt || null,
+      lastSummarizedAt: now,
+      model: OPENAI_SUMMARY_MODEL,
+      version: 1,
+      updatedAt: now
+    },
+    { merge: true }
+  );
+
+  await profileDoc.ref.update({
+    summaryStatus: "ready",
+    workplaceTag: workplaceTag || null,
+    lastSummarizedAt: now,
+    updatedAt: now
+  });
+
+  return {
+    status: "updated"
+  };
+}
+
 export const summarizeProfilesDaily = onSchedule(
   {
     schedule: "0 5 * * *",
@@ -586,79 +670,11 @@ export const summarizeProfilesDaily = onSchedule(
 
     for (const profileDoc of pendingProfilesSnapshot.docs) {
       const profileId = profileDoc.id;
-      const profileData = profileDoc.data();
-      const summaryRef = db.doc(`profiles/${profileId}/private/summary`);
 
       try {
-        await profileDoc.ref.update({
-          summaryStatus: "processing",
-          updatedAt: FieldValue.serverTimestamp()
-        });
+        const result = await runProfileSummary(profileDoc);
 
-        const summarySnapshot = await summaryRef.get();
-        const summaryData = summarySnapshot.exists ? summarySnapshot.data() : {};
-        const lastSummarizedAt = summaryData?.lastSummarizedAt || null;
-
-        let notesQuery = db.collection(`profiles/${profileId}/notes`).orderBy("updatedAt", "desc");
-
-        if (lastSummarizedAt) {
-          notesQuery = notesQuery.where("updatedAt", ">", lastSummarizedAt);
-        }
-
-        const updatedNotesSnapshot = await notesQuery.limit(MAX_UPDATED_NOTES).get();
-        const updatedNotes = updatedNotesSnapshot.docs
-          .map((noteDoc) => {
-            const noteData = noteDoc.data();
-
-            return {
-              id: noteDoc.id,
-              body: truncateNoteBody(String(noteData.body || "")),
-              updatedAt: noteData.updatedAt || noteData.createdAt || null
-            };
-          })
-          .filter((note) => note.body);
-
-        if (!updatedNotes.length && Array.isArray(summaryData?.bullets)) {
-          await profileDoc.ref.update({
-            summaryStatus: "ready",
-            lastSummarizedAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp()
-          });
-          continue;
-        }
-
-        const bullets = await summarizeProfile({
-          profileId,
-          fullName: String(profileData.fullName || ""),
-          existingBullets: Array.isArray(summaryData?.bullets) ? summaryData.bullets : [],
-          updatedNotes
-        });
-        const workplaceTag = extractCurrentWorkplace(bullets);
-
-        const now = FieldValue.serverTimestamp();
-
-        await summaryRef.set(
-          {
-            ownerUid: String(profileData.ownerUid || ""),
-            bullets,
-            sourceNoteCount: Number(profileData.noteCount || 0),
-            lastNoteUpdatedAt: profileData.lastNoteUpdatedAt || null,
-            lastSummarizedAt: now,
-            model: OPENAI_SUMMARY_MODEL,
-            version: 1,
-            updatedAt: now
-          },
-          { merge: true }
-        );
-
-        await profileDoc.ref.update({
-          summaryStatus: "ready",
-          workplaceTag: workplaceTag || null,
-          lastSummarizedAt: now,
-          updatedAt: now
-        });
-
-        logger.info("Profile summary updated.", { profileId });
+        logger.info("Profile summary handled.", { profileId, status: result.status });
       } catch (error) {
         logger.error("Profile summary update failed.", {
           profileId,
@@ -672,6 +688,46 @@ export const summarizeProfilesDaily = onSchedule(
         });
       }
     }
+  }
+);
+
+export const summarizeProfileNow = onCall(
+  {
+    region: "asia-northeast1",
+    secrets: [OPENAI_API_KEY]
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    const profileId =
+      typeof request.data?.profileId === "string" ? request.data.profileId.trim() : "";
+
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    if (!profileId) {
+      throw new HttpsError("invalid-argument", "プロフィールIDが必要です。");
+    }
+
+    const profileRef = db.doc(`profiles/${profileId}`);
+    const profileSnapshot = await profileRef.get();
+
+    if (!profileSnapshot.exists) {
+      throw new HttpsError("not-found", "プロフィールが見つかりません。");
+    }
+
+    const profileData = profileSnapshot.data();
+    if (String(profileData?.ownerUid || "") !== uid) {
+      throw new HttpsError("permission-denied", "このプロフィールを要約する権限がありません。");
+    }
+
+    const summaryStatus = String(profileData?.summaryStatus || "idle");
+    if (summaryStatus === "processing") {
+      return { status: "processing" };
+    }
+
+    const result = await runProfileSummary(profileSnapshot);
+    return result;
   }
 );
 
