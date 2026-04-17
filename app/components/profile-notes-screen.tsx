@@ -12,14 +12,43 @@ function TimelineCard({
   profileId,
   id,
   body,
+  sourceType,
 }: {
   profileId: string;
   id: string;
   body: string;
+  sourceType: ProfileNoteItem["sourceType"];
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const shouldClamp =
+    sourceType === "company_release" && (body.split("\n").length > 5 || body.length > 220);
+
   return (
     <article className="relative rounded-[18px] bg-[#f3f3f3] px-6 py-7">
-      <p className="pr-8 text-[16px] leading-[1.75] font-medium text-[#4b4b4b]">{body}</p>
+      <p
+        className="pr-8 text-[16px] leading-[1.75] font-medium whitespace-pre-wrap text-[#4b4b4b]"
+        style={
+          shouldClamp && !isExpanded
+            ? {
+                display: "-webkit-box",
+                WebkitLineClamp: 5,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }
+            : undefined
+        }
+      >
+        {body}
+      </p>
+      {shouldClamp ? (
+        <button
+          type="button"
+          onClick={() => setIsExpanded((current) => !current)}
+          className="mt-3 text-[12px] font-bold text-[var(--color-main)] underline"
+        >
+          {isExpanded ? "閉じる" : "全文を見る"}
+        </button>
+      ) : null}
       <Link
         href={`/profiles/${profileId}/notes/${id}`}
         aria-label="キズナノートを編集"
@@ -131,7 +160,13 @@ export default function ProfileNotesScreen({ profileId }: { profileId: string })
                       <p className="text-[12px] font-bold tracking-[0.01em] text-[#727272]">{group.date}</p>
                       <div className="mt-3 space-y-4">
                         {group.entries.map((entry) => (
-                          <TimelineCard key={entry.id} profileId={profileId} id={entry.id} body={entry.body} />
+                          <TimelineCard
+                            key={entry.id}
+                            profileId={profileId}
+                            id={entry.id}
+                            body={entry.body}
+                            sourceType={entry.sourceType}
+                          />
                         ))}
                       </div>
                     </div>

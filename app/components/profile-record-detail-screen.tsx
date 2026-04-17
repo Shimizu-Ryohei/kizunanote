@@ -93,6 +93,20 @@ function LinkedInIcon() {
   );
 }
 
+function LinkIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M10.5 13.5 13.5 10.5M9.25 14.75l-1.5 1.5a2.47 2.47 0 0 1-3.5-3.5l3-3a2.47 2.47 0 0 1 3.5 0M14.75 9.25l1.5-1.5a2.47 2.47 0 1 1 3.5 3.5l-3 3a2.47 2.47 0 0 1-3.5 0"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function SparklesIcon() {
   return (
     <svg aria-hidden="true" className="h-4 w-4 text-[var(--color-main)]" viewBox="0 0 24 24" fill="none">
@@ -218,6 +232,12 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         : `in/${linkedInValue.replace(/^@/, "")}`
       : "";
     const linkedInUrl = linkedInPath ? `https://www.linkedin.com/${linkedInPath}` : "";
+    const rawCompanyUrl = profile.contacts.companyUrl.trim();
+    const companyUrl = rawCompanyUrl
+      ? rawCompanyUrl.startsWith("http://") || rawCompanyUrl.startsWith("https://")
+        ? rawCompanyUrl
+        : `https://${rawCompanyUrl}`
+      : "";
 
     return [
       {
@@ -231,6 +251,12 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         icon: <MailIcon />,
         value: profile.contacts.email,
         href: profile.contacts.email ? `mailto:${profile.contacts.email}` : "",
+      },
+      {
+        key: "companyUrl",
+        icon: <LinkIcon />,
+        value: profile.contacts.companyUrl,
+        href: companyUrl,
       },
       {
         key: "x",

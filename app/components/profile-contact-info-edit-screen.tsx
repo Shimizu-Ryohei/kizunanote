@@ -112,6 +112,7 @@ export default function ProfileContactInfoEditScreen({ profileId }: { profileId:
     phoneCountryCode: "+81",
     phone: "",
     email: "",
+    companyUrl: "",
     x: "",
     facebook: "",
     instagram: "",
@@ -244,6 +245,13 @@ export default function ProfileContactInfoEditScreen({ profileId }: { profileId:
                 onChange={(value) => updateField("email", value)}
                 placeholder="name@example.com"
                 inputMode="email"
+              />
+              <ContactFieldCard
+                label="勤務先URL"
+                value={form.companyUrl}
+                onChange={(value) => updateField("companyUrl", value)}
+                placeholder="https://example.com"
+                inputMode="url"
               />
             </section>
 

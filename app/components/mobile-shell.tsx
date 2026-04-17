@@ -1,9 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "./auth-provider";
+import UpgradeRequiredModal from "./upgrade-required-modal";
+import { countProfilesByOwner } from "@/lib/firebase/profiles";
+import { getCurrentPlan } from "@/lib/firebase/subscription";
 
 type MobileShellProps = {
   children: ReactNode;
@@ -52,49 +56,102 @@ export function AppHeader() {
 
 export function BottomMenu() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [shouldBlockNewProfile, setShouldBlockNewProfile] = useState(false);
+  const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const isHomeActive =
     pathname === "/home" || (pathname.startsWith("/profiles") && pathname !== "/profiles/new");
   const isSettingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
 
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.all([getCurrentPlan(user.uid), countProfilesByOwner(user.uid)])
+      .then(([planId, profileCount]) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setShouldBlockNewProfile(planId === "standard" && profileCount >= 20);
+      })
+      .catch((error) => {
+        console.error(error);
+
+        if (isMounted) {
+          setShouldBlockNewProfile(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, user]);
+
+  const handleCreateProfileClick = () => {
+    if (shouldBlockNewProfile) {
+      setIsLimitModalOpen(true);
+      return;
+    }
+
+    router.push("/profiles/new");
+  };
+
   return (
-    <nav
-      aria-label="メインメニュー"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-black/5 bg-white/95 shadow-[0_-10px_28px_rgba(0,0,0,0.04)] backdrop-blur"
-      style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 1rem)" }}
-    >
-      <div className="grid h-[68px] grid-cols-3 items-end px-6 pb-2">
-        <Link
-          href="/home"
-          aria-label="ホーム"
-          className={`relative -top-[6px] justify-self-center flex flex-col items-center gap-1 transition-colors ${
-            isHomeActive ? "text-black" : "text-[#b8b8b8]"
-          }`}
-        >
-          <HomeIcon />
-          <span className="text-[10px] font-bold leading-none">ホーム</span>
-        </Link>
-        <Link
-          href="/profiles/new"
-          aria-label="新規作成"
-          className="relative -top-[6px] justify-self-center flex flex-col items-center gap-1 text-[var(--color-main)] transition-colors"
-        >
-          <span className="relative -top-1 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--color-main)] text-[30px] font-black leading-none text-white">
-            <span className="relative -top-px">+</span>
-          </span>
-          <span className="text-[10px] font-bold leading-none">プロフィール追加</span>
-        </Link>
-        <Link
-          href="/settings"
-          aria-label="プロフィール"
-          className={`relative -top-[6px] justify-self-center flex flex-col items-center gap-1 transition-colors ${
-            isSettingsActive ? "text-black" : "text-[#b8b8b8]"
-          }`}
-        >
-          <SettingsIcon />
-          <span className="text-[10px] font-bold leading-none">設定</span>
-        </Link>
-      </div>
-    </nav>
+    <>
+      <nav
+        aria-label="メインメニュー"
+        className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-black/5 bg-white/95 shadow-[0_-10px_28px_rgba(0,0,0,0.04)] backdrop-blur"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 1rem)" }}
+      >
+        <div className="grid h-[68px] grid-cols-3 items-end px-6 pb-2">
+          <Link
+            href="/home"
+            aria-label="ホーム"
+            className={`relative -top-[6px] justify-self-center flex flex-col items-center gap-1 transition-colors ${
+              isHomeActive ? "text-black" : "text-[#b8b8b8]"
+            }`}
+          >
+            <HomeIcon />
+            <span className="text-[10px] font-bold leading-none">ホーム</span>
+          </Link>
+          <button
+            type="button"
+            aria-label="新規作成"
+            onClick={handleCreateProfileClick}
+            className="relative -top-[6px] justify-self-center flex flex-col items-center gap-1 text-[var(--color-main)] transition-colors"
+          >
+            <span className="relative -top-1 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--color-main)] text-[30px] font-black leading-none text-white">
+              <span className="relative -top-px">+</span>
+            </span>
+            <span className="text-[10px] font-bold leading-none">プロフィール追加</span>
+          </button>
+          <Link
+            href="/settings"
+            aria-label="プロフィール"
+            className={`relative -top-[6px] justify-self-center flex flex-col items-center gap-1 transition-colors ${
+              isSettingsActive ? "text-black" : "text-[#b8b8b8]"
+            }`}
+          >
+            <SettingsIcon />
+            <span className="text-[10px] font-bold leading-none">設定</span>
+          </Link>
+        </div>
+      </nav>
+      {isLimitModalOpen ? (
+        <UpgradeRequiredModal
+          onCancel={() => setIsLimitModalOpen(false)}
+          onViewPlans={() => {
+            setIsLimitModalOpen(false);
+            router.push("/settings/upgrade");
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 

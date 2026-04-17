@@ -4,12 +4,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MobileShell from "./mobile-shell";
+import DeleteProfileConfirmModal from "./delete-profile-confirm-modal";
 import PrimaryCta from "./primary-cta";
 import SuccessModal from "./success-modal";
 import { useAuth } from "./auth-provider";
 import { useFuriganaAutofill } from "@/lib/furigana/use-furigana-autofill";
 import { compressImage } from "@/lib/image/compress-image";
-import { getProfileDetailById, updateProfileBasics, type ProfileDetail } from "@/lib/firebase/profiles";
+import { deleteProfile, getProfileDetailById, updateProfileBasics, type ProfileDetail } from "@/lib/firebase/profiles";
 import type { ProfileHeaderData } from "./profile-content";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -47,7 +48,9 @@ export default function ProfileBasicEditRecordScreen({ profileId }: { profileId:
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const currentYear = new Date().getFullYear();
   const lastNameKanaAutofill = useFuriganaAutofill({
@@ -190,6 +193,24 @@ export default function ProfileBasicEditRecordScreen({ profileId }: { profileId:
     }
   };
 
+  const handleDelete = async () => {
+    if (!user) {
+      setErrorMessage("ログイン状態を確認できませんでした。");
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteProfile(profileId, user.uid);
+      router.replace("/home");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("プロフィールの削除に失敗しました。");
+      setIsDeleting(false);
+      setIsDeleteConfirmOpen(false);
+    }
+  };
+
   const headerProfile = useMemo<ProfileHeaderData | null>(() => {
     if (!profile) {
       return null;
@@ -211,7 +232,7 @@ export default function ProfileBasicEditRecordScreen({ profileId }: { profileId:
         {isLoading ? <p className="mt-6 text-[14px] font-medium text-[#8b8b8b]">プロフィールを読み込み中...</p> : null}
         {!isLoading && errorMessage && !profile ? <p className="mt-6 text-[13px] font-medium text-[#d64253]">{errorMessage}</p> : null}
         {profile && headerProfile ? (
-          <div className={isSavedModalOpen ? "pointer-events-none blur-md" : ""}>
+          <div className={isSavedModalOpen || isDeleteConfirmOpen ? "pointer-events-none blur-md" : ""}>
             <form className="mt-1 space-y-8" noValidate onSubmit={handleSave}>
               <section className="flex items-start gap-4">
                 <button
@@ -252,11 +273,25 @@ export default function ProfileBasicEditRecordScreen({ profileId }: { profileId:
               <PrimaryCta type="submit" className={`relative z-40 mt-10 ${isSaving ? "opacity-70" : ""}`} disabled={isSaving}>
                 {isSaving ? "保存中..." : "保存する"}
               </PrimaryCta>
+              <button
+                type="button"
+                onClick={() => setIsDeleteConfirmOpen(true)}
+                className="mx-auto mt-5 block w-fit text-center text-[11px] font-medium leading-none text-[#b5b5b5] underline"
+              >
+                このプロフィールを削除する
+              </button>
             </form>
           </div>
         ) : null}
 
         {isSavedModalOpen ? <SuccessModal onConfirm={() => router.replace(`/profiles/${profileId}`)} /> : null}
+        {isDeleteConfirmOpen ? (
+          <DeleteProfileConfirmModal
+            isDeleting={isDeleting}
+            onCancel={() => setIsDeleteConfirmOpen(false)}
+            onDelete={handleDelete}
+          />
+        ) : null}
       </main>
     </MobileShell>
   );

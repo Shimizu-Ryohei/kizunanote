@@ -142,13 +142,7 @@ export default function PlanUpgradeScreen() {
               name="Plus"
               price="480円/月"
               isCurrent={currentPlan === "plus"}
-              ctaLabel={
-                currentPlan === "standard"
-                  ? "Plusにアップグレードする"
-                  : currentPlan === "pro"
-                    ? "Plusにダウングレードする"
-                    : undefined
-              }
+              ctaLabel="近日リリース予定です"
               description="Standardのすべての機能に加えて："
               features={[
                 "無制限のプロフィール登録",
@@ -159,11 +153,7 @@ export default function PlanUpgradeScreen() {
               name="Pro"
               price="980円/月"
               isCurrent={currentPlan === "pro"}
-              ctaLabel={
-                currentPlan === "standard" || currentPlan === "plus"
-                  ? "Proにアップグレードする"
-                  : undefined
-              }
+              ctaLabel="近日リリース予定です"
               description="Plusのすべての機能に加えて："
               features={[
                 "即時の要約実行が可能",

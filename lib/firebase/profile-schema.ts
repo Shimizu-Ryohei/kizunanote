@@ -24,6 +24,7 @@ export type ProfileContactDoc = {
   phoneCountryCode: string;
   phone: string;
   email: string;
+  companyUrl: string;
   x: string;
   facebook: string;
   instagram: string;
@@ -44,6 +45,9 @@ export type ProfileSummaryDoc = {
 
 export type KizunaNoteDoc = {
   body: string;
+  sourceType?: "manual" | "company_release";
+  sourceUrl?: string | null;
+  sourceTitle?: string | null;
   happenedAt: unknown;
   createdByUid: string;
   createdAt: unknown;

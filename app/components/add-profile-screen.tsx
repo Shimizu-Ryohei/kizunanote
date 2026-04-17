@@ -8,9 +8,11 @@ import MobileShell from "./mobile-shell";
 import { CameraPlusIcon } from "./icons";
 import PrimaryCta from "./primary-cta";
 import SuccessModal from "./success-modal";
-import { createProfile } from "@/lib/firebase/profiles";
+import UpgradeRequiredModal from "./upgrade-required-modal";
+import { countProfilesByOwner, createProfile } from "@/lib/firebase/profiles";
 import { useFuriganaAutofill } from "@/lib/furigana/use-furigana-autofill";
 import { compressImage } from "@/lib/image/compress-image";
+import { getCurrentPlan } from "@/lib/firebase/subscription";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -55,6 +57,7 @@ export default function AddProfileScreen() {
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isUpgradeRequired, setIsUpgradeRequired] = useState(false);
   const currentYear = new Date().getFullYear();
   const lastNameKanaAutofill = useFuriganaAutofill({
     sourceValue: lastName,
@@ -76,6 +79,30 @@ export default function AddProfileScreen() {
       }
     };
   }, [photoPreview]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let isMounted = true;
+
+    Promise.all([getCurrentPlan(user.uid), countProfilesByOwner(user.uid)])
+      .then(([planId, profileCount]) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setIsUpgradeRequired(planId === "standard" && profileCount >= 20);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -138,6 +165,10 @@ export default function AddProfileScreen() {
 
     if (!user) {
       setErrorMessage("ログイン状態を確認できませんでした。再度ログインしてください。");
+      return;
+    }
+
+    if (isUpgradeRequired) {
       return;
     }
 
@@ -282,6 +313,12 @@ export default function AddProfileScreen() {
         </div>
 
         {isSavedModalOpen ? <SuccessModal onConfirm={() => router.push("/home")} /> : null}
+        {isUpgradeRequired ? (
+          <UpgradeRequiredModal
+            onCancel={() => router.replace("/home")}
+            onViewPlans={() => router.push("/settings/upgrade")}
+          />
+        ) : null}
       </main>
     </MobileShell>
   );

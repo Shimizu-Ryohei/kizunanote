@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -11,7 +12,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { firebaseAuth, firestore, getFirebaseConfigError, storage } from "./client";
 import type {
   KizunaNoteDoc,
@@ -48,6 +49,7 @@ export type ProfileContact = {
   phoneCountryCode: string;
   phone: string;
   email: string;
+  companyUrl: string;
   x: string;
   facebook: string;
   instagram: string;
@@ -57,6 +59,9 @@ export type ProfileContact = {
 export type ProfileNoteItem = {
   id: string;
   body: string;
+  sourceType: "manual" | "company_release";
+  sourceUrl: string | null;
+  sourceTitle: string | null;
   happenedAtLabel: string;
   createdAtMillis: number;
 };
@@ -74,6 +79,7 @@ type UpdateProfileContactInput = {
   phoneCountryCode: string;
   phone: string;
   email: string;
+  companyUrl: string;
   x: string;
   facebook: string;
   instagram: string;
@@ -160,6 +166,7 @@ export async function createProfile({
     phoneCountryCode: "+81",
     phone: "",
     email: "",
+    companyUrl: "",
     x: "",
     facebook: "",
     instagram: "",
@@ -365,6 +372,16 @@ export async function listProfilesByOwner(ownerUid: string) {
     });
 }
 
+export async function countProfilesByOwner(ownerUid: string) {
+  if (!firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  const db = firestore;
+  const snapshot = await getDocs(query(collection(db, "profiles"), where("ownerUid", "==", ownerUid)));
+  return snapshot.size;
+}
+
 export async function getProfileDetailById(profileId: string, ownerUid: string) {
   if (!firestore) {
     throw new Error(getFirebaseConfigError());
@@ -417,6 +434,7 @@ export async function getProfileDetailById(profileId: string, ownerUid: string) 
       phoneCountryCode: contactData.phoneCountryCode ?? "+81",
       phone: contactData.phone ?? "",
       email: contactData.email ?? "",
+      companyUrl: contactData.companyUrl ?? "",
       x: contactData.x ?? "",
       facebook: contactData.facebook ?? "",
       instagram: contactData.instagram ?? "",
@@ -452,6 +470,9 @@ export async function addProfileNote(profileId: string, body: string, userUid: s
 
   await addDoc(collection(db, "profiles", profileId, "notes"), {
     body: trimmedBody,
+    sourceType: "manual",
+    sourceUrl: null,
+    sourceTitle: null,
     happenedAt: serverTimestamp(),
     createdByUid: userUid,
     createdAt: serverTimestamp(),
@@ -478,12 +499,22 @@ export async function listProfileNotes(profileId: string, ownerUid: string) {
 
   return snapshot.docs
     .map((noteDoc) => {
-      const noteData = noteDoc.data() as { body?: string; happenedAt?: unknown; createdAt?: unknown };
+      const noteData = noteDoc.data() as {
+        body?: string;
+        sourceType?: "manual" | "company_release";
+        sourceUrl?: string | null;
+        sourceTitle?: string | null;
+        happenedAt?: unknown;
+        createdAt?: unknown;
+      };
       const noteDate = toDate(noteData.happenedAt) ?? toDate(noteData.createdAt) ?? new Date(0);
 
       return {
         id: noteDoc.id,
         body: noteData.body ?? "",
+        sourceType: noteData.sourceType === "company_release" ? "company_release" : "manual",
+        sourceUrl: typeof noteData.sourceUrl === "string" ? noteData.sourceUrl : null,
+        sourceTitle: typeof noteData.sourceTitle === "string" ? noteData.sourceTitle : null,
         happenedAtLabel: formatDateLabel(noteDate),
         createdAtMillis: noteDate.getTime(),
       } satisfies ProfileNoteItem;
@@ -504,12 +535,22 @@ export async function getProfileNoteById(profileId: string, noteId: string, owne
     throw new Error("キズナノートが見つかりませんでした。");
   }
 
-  const noteData = noteSnapshot.data() as { body?: string; happenedAt?: unknown; createdAt?: unknown };
+  const noteData = noteSnapshot.data() as {
+    body?: string;
+    sourceType?: "manual" | "company_release";
+    sourceUrl?: string | null;
+    sourceTitle?: string | null;
+    happenedAt?: unknown;
+    createdAt?: unknown;
+  };
   const noteDate = toDate(noteData.happenedAt) ?? toDate(noteData.createdAt) ?? new Date(0);
 
   return {
     id: noteSnapshot.id,
     body: noteData.body ?? "",
+    sourceType: noteData.sourceType === "company_release" ? "company_release" : "manual",
+    sourceUrl: typeof noteData.sourceUrl === "string" ? noteData.sourceUrl : null,
+    sourceTitle: typeof noteData.sourceTitle === "string" ? noteData.sourceTitle : null,
     happenedAtLabel: formatDateLabel(noteDate),
     createdAtMillis: noteDate.getTime(),
   } satisfies ProfileNoteItem;
@@ -548,6 +589,7 @@ export async function getProfileContact(profileId: string, ownerUid: string) {
     phone: contactData.phone ?? "",
     phoneCountryCode: contactData.phoneCountryCode ?? "+81",
     email: contactData.email ?? "",
+    companyUrl: contactData.companyUrl ?? "",
     x: contactData.x ?? "",
     facebook: contactData.facebook ?? "",
     instagram: contactData.instagram ?? "",
@@ -568,6 +610,7 @@ export async function updateProfileContact(profileId: string, ownerUid: string, 
       phone: input.phone.trim(),
       phoneCountryCode: input.phoneCountryCode.trim() || "+81",
       email: input.email.trim(),
+      companyUrl: input.companyUrl.trim(),
       x: input.x.trim(),
       facebook: input.facebook.trim(),
       instagram: input.instagram.trim(),
@@ -611,4 +654,31 @@ export async function updateProfileBasics(profileId: string, ownerUid: string, i
   }
 
   await updateDoc(doc(db, "profiles", profileId), payload);
+}
+
+export async function deleteProfile(profileId: string, ownerUid: string) {
+  if (!firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  const db = firestore;
+  const profileSnapshot = await getOwnedProfileSnapshot(profileId, ownerUid);
+  const profileData = profileSnapshot.data() as { photoStoragePath?: string | null };
+  const notesSnapshot = await getDocs(collection(db, "profiles", profileId, "notes"));
+
+  await Promise.all([
+    ...notesSnapshot.docs.map((noteDoc) => deleteDoc(noteDoc.ref)),
+    deleteDoc(doc(db, "profiles", profileId, "private", "contact")),
+    deleteDoc(doc(db, "profiles", profileId, "private", "summary")),
+  ]);
+
+  if (profileData.photoStoragePath && storage) {
+    try {
+      await deleteObject(ref(storage, profileData.photoStoragePath));
+    } catch (error) {
+      console.error("Failed to delete profile photo", error);
+    }
+  }
+
+  await deleteDoc(doc(db, "profiles", profileId));
 }

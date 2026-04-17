@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
@@ -13,6 +14,9 @@ const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 const MAX_UPDATED_NOTES = 50;
 const MAX_NOTE_BODY_LENGTH = 1200;
 const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
+const COMPANY_CRAWL_MAX_PAGES = 8;
+const COMPANY_CRAWL_PAGE_TIMEOUT_MS = 15000;
+const COMPANY_CRAWL_SCHEDULE = "0 0,16 * * *";
 
 function truncateNoteBody(body) {
   return body.length > MAX_NOTE_BODY_LENGTH ? `${body.slice(0, MAX_NOTE_BODY_LENGTH)}...` : body;
@@ -50,6 +54,343 @@ function extractResponseText(responseBody) {
 
 function normalizeSummaryBullet(value) {
   return value.replace(/\s+/g, " ").replace(/　/g, " ").trim();
+}
+
+function getJstNowParts() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = formatter.formatToParts(new Date());
+
+  return {
+    year: parts.find((part) => part.type === "year")?.value || "",
+    month: parts.find((part) => part.type === "month")?.value || "",
+    day: parts.find((part) => part.type === "day")?.value || ""
+  };
+}
+
+function buildTodayDatePatterns() {
+  const { year, month, day } = getJstNowParts();
+  const monthNumber = String(Number(month));
+  const dayNumber = String(Number(day));
+
+  return [
+    `${year}/${month}/${day}`,
+    `${year}-${month}-${day}`,
+    `${year}.${month}.${day}`,
+    `${year}年${monthNumber}月${dayNumber}日`,
+    `${year}年${month}月${day}日`
+  ].filter(Boolean);
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, "\"")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function normalizeReleaseBody(text) {
+  return text
+    .replace(/^プロフィール本人は/u, "")
+    .replace(/^この人は/u, "")
+    .trim();
+}
+
+function extractTitleFromHtml(html, fallbackUrl) {
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1Match?.[1]) {
+    return stripHtml(h1Match[1]).slice(0, 140);
+  }
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (titleMatch?.[1]) {
+    return stripHtml(titleMatch[1]).slice(0, 140);
+  }
+
+  try {
+    const url = new URL(fallbackUrl);
+    return url.hostname;
+  } catch {
+    return fallbackUrl;
+  }
+}
+
+function getLikelyContentHtml(html) {
+  const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
+  if (articleMatch?.[1]) {
+    return articleMatch[1];
+  }
+
+  const mainMatch = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+  if (mainMatch?.[1]) {
+    return mainMatch[1];
+  }
+
+  const bodyMatch = html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  return bodyMatch?.[1] ?? html;
+}
+
+function splitMeaningfulLines(text) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 2);
+}
+
+function extractTodayReleaseSection(text) {
+  const todayPatterns = buildTodayDatePatterns();
+  const lines = splitMeaningfulLines(text);
+  const releases = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const hasToday = todayPatterns.some((pattern) => line.includes(pattern));
+
+    if (!hasToday) {
+      continue;
+    }
+
+    const previousWindow = lines.slice(Math.max(0, index - 3), index + 1).join(" ");
+    const nextWindow = lines.slice(index, index + 8).join(" ");
+    const inReleaseSection =
+      /(news|press release|topics|information)/i.test(previousWindow + " " + nextWindow) ||
+      /(ニュース|お知らせ|プレスリリース|新着|トピックス|最新情報|ニュースリリース)/.test(
+        previousWindow + nextWindow
+      );
+
+    if (!inReleaseSection) {
+      continue;
+    }
+
+    const buffer = [line];
+
+    for (let offset = 1; offset <= 5; offset += 1) {
+      const nextLine = lines[index + offset];
+
+      if (!nextLine) {
+        break;
+      }
+
+      const isAnotherDate = todayPatterns.some((pattern) => nextLine.includes(pattern));
+      const isSectionHeading =
+        /^(news|topics|information|press release)$/i.test(nextLine) ||
+        /^(ニュース|お知らせ|プレスリリース|新着|トピックス|最新情報|ニュースリリース)$/.test(nextLine);
+
+      if (offset > 1 && (isAnotherDate || isSectionHeading)) {
+        break;
+      }
+
+      buffer.push(nextLine);
+    }
+
+    const uniqueBuffer = Array.from(new Set(buffer));
+    const candidate = uniqueBuffer.join("\n").trim();
+    const titleLine =
+      uniqueBuffer.find(
+        (entry) =>
+          !todayPatterns.some((pattern) => entry.includes(pattern)) &&
+          !/^(news|topics|information|press release)$/i.test(entry) &&
+          !/^(ニュース|お知らせ|プレスリリース|新着|トピックス|最新情報|ニュースリリース)$/.test(entry)
+      ) || null;
+
+    if (candidate.length >= 20) {
+      releases.push({
+        body: candidate,
+        title: titleLine
+      });
+    }
+  }
+
+  return releases;
+}
+
+function extractSameOriginLinks(baseUrl, html) {
+  let base;
+
+  try {
+    base = new URL(baseUrl);
+  } catch {
+    return [];
+  }
+
+  const links = [];
+  const regex = /<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = regex.exec(html))) {
+    try {
+      const url = new URL(match[1], base);
+      if (url.origin !== base.origin) {
+        continue;
+      }
+
+      const text = stripHtml(match[2]).slice(0, 160);
+      links.push({
+        url: url.toString(),
+        text
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  return links;
+}
+
+function scoreCompanyReleaseLink(url, text) {
+  const value = `${url} ${text}`.toLowerCase();
+  let score = 0;
+
+  if (/(news|press|release|releases|topics|information|info|newsroom|ir)/.test(value)) {
+    score += 3;
+  }
+
+  if (/(ニュース|お知らせ|プレスリリース|新着|トピックス|最新情報|ニュースリリース)/.test(value)) {
+    score += 3;
+  }
+
+  if (/\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}/.test(value) || /\d{4}年\d{1,2}月\d{1,2}日/.test(value)) {
+    score += 2;
+  }
+
+  if (text.length > 8) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function isLikelyReleasePage({ url, html, text }) {
+  const anchorCount = (html.match(/<a\b/gi) || []).length;
+  const title = extractTitleFromHtml(html, url).toLowerCase();
+  const urlLower = url.toLowerCase();
+  const releaseKeyword =
+    /(news|press|release|releases|topics|information|info|newsroom|ir)/.test(urlLower) ||
+    /(ニュース|お知らせ|プレスリリース|新着|トピックス|最新情報|ニュースリリース)/.test(title);
+  const sectionKeyword =
+    /(news|press release|topics|information)/i.test(text) ||
+    /(ニュース|お知らせ|プレスリリース|新着|トピックス|最新情報|ニュースリリース)/.test(text);
+
+  return (releaseKeyword || sectionKeyword) && anchorCount <= 80 && text.length >= 180;
+}
+
+async function fetchTextWithTimeout(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), COMPANY_CRAWL_PAGE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "KizunaNoteBot/1.0 (+https://kizunanote.com)"
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function crawlCompanyReleasePages(companyUrl) {
+  const queue = [{ url: companyUrl, depth: 0 }];
+  const visited = new Set();
+  const releases = [];
+
+  while (queue.length && visited.size < COMPANY_CRAWL_MAX_PAGES) {
+    const current = queue.shift();
+    if (!current || visited.has(current.url)) {
+      continue;
+    }
+
+    visited.add(current.url);
+
+    let html;
+    try {
+      html = await fetchTextWithTimeout(current.url);
+    } catch (error) {
+      logger.warn("Failed to fetch company release page.", {
+        url: current.url,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      continue;
+    }
+
+    const contentHtml = getLikelyContentHtml(html);
+    const text = stripHtml(contentHtml);
+    const releaseSections = extractTodayReleaseSection(text);
+
+    if (releaseSections.length && isLikelyReleasePage({ url: current.url, html, text })) {
+      for (const section of releaseSections) {
+        releases.push({
+          url: current.url,
+          title: section.title || extractTitleFromHtml(html, current.url),
+          body: section.body
+        });
+      }
+    }
+
+    if (current.depth >= 1) {
+      continue;
+    }
+
+    const candidateLinks = extractSameOriginLinks(current.url, html)
+      .map((link) => ({ ...link, score: scoreCompanyReleaseLink(link.url, link.text) }))
+      .filter((link) => link.score > 0)
+      .sort((left, right) => right.score - left.score)
+      .slice(0, COMPANY_CRAWL_MAX_PAGES - visited.size);
+
+    for (const link of candidateLinks) {
+      if (!visited.has(link.url)) {
+        queue.push({ url: link.url, depth: current.depth + 1 });
+      }
+    }
+  }
+
+  return releases;
+}
+
+function buildCompanyReleaseNoteBody({ title, url, body }) {
+  const trimmedBody = body.slice(0, 6000).trim();
+  return [`【勤務先リリース】${title}`, url, "", trimmedBody].join("\n");
+}
+
+function buildCompanyReleaseImportKey(release) {
+  return createStableDocId(
+    [
+      release.url.trim(),
+      release.title.trim(),
+      normalizeReleaseBody(release.body).trim()
+    ].join("\n")
+  );
+}
+
+function createStableDocId(value) {
+  return createHash("sha256").update(value).digest("hex").slice(0, 40);
 }
 
 function cleanWorkplaceLabel(value) {
@@ -142,8 +483,12 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
             type: "input_text",
             text:
               "You create concise Japanese relationship-memory summaries for a person profile. " +
+              "You are summarizing facts about the profile person, not the note author. " +
               "Return up to 5 bullet points, each a single sentence, prioritizing stable useful facts, preferences, relationships, and recent important context. " +
-              "Merge overlap, remove redundancy, and avoid speculation."
+              "Merge overlap, remove redundancy, and avoid speculation. " +
+              "Important interpretation rules: first-person expressions such as 私, わたし, 僕, 俺, わたくし refer to the note author, not the profile person. " +
+              "When a note says things like '私の弟', '私の妻', '私の上司', '私の部下', rewrite them as the relationship from the profile person to the note author, for example 'プロフィール本人は記録者の弟', 'プロフィール本人は記録者の妻'. " +
+              "Do not incorrectly turn first-person statements into attributes of the profile person."
           }
         ]
       },
@@ -156,6 +501,8 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
               {
                 profileId,
                 fullName,
+                summaryPerspective:
+                  "対象はプロフィール本人です。ノートの一人称は記録者本人を指します。関係性はプロフィール本人から見た表現に言い換えてください。",
                 existingSummaryBullets: existingBullets,
                 updatedNotes
               },
@@ -212,7 +559,7 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
 
   return parsed.bullets
     .filter((bullet) => typeof bullet === "string")
-    .map((bullet) => bullet.trim())
+    .map((bullet) => normalizeReleaseBody(bullet))
     .filter(Boolean)
     .slice(0, 5);
 }
@@ -485,5 +832,116 @@ export const getAdminContactInquiries = onCall(
           : ""
       };
     });
+  }
+);
+
+export const importCompanyReleaseNotes = onSchedule(
+  {
+    schedule: COMPANY_CRAWL_SCHEDULE,
+    timeZone: "Asia/Tokyo",
+    region: "asia-northeast1",
+    memory: "512MiB",
+    timeoutSeconds: 540
+  },
+  async () => {
+    const profilesSnapshot = await db.collection("profiles").get();
+
+    if (profilesSnapshot.empty) {
+      logger.info("No profiles found for company release crawl.");
+      return;
+    }
+
+    const userPlanCache = new Map();
+
+    for (const profileDoc of profilesSnapshot.docs) {
+      const profileData = profileDoc.data();
+      const ownerUid = String(profileData.ownerUid || "");
+
+      if (!ownerUid) {
+        continue;
+      }
+
+      let ownerPlan = userPlanCache.get(ownerUid);
+
+      if (!ownerPlan) {
+        const userSnapshot = await db.doc(`users/${ownerUid}`).get();
+        const userData = userSnapshot.exists ? userSnapshot.data() : {};
+        const rawPlanId = typeof userData?.planId === "string" ? userData.planId.trim().toLowerCase() : "";
+        ownerPlan = rawPlanId === "pro" ? "pro" : "other";
+        userPlanCache.set(ownerUid, ownerPlan);
+      }
+
+      if (ownerPlan !== "pro") {
+        continue;
+      }
+
+      const contactSnapshot = await db.doc(`profiles/${profileDoc.id}/private/contact`).get();
+      const contactData = contactSnapshot.exists ? contactSnapshot.data() : {};
+      const companyUrl = typeof contactData?.companyUrl === "string" ? contactData.companyUrl.trim() : "";
+
+      if (!companyUrl) {
+        continue;
+      }
+
+      const normalizedCompanyUrl =
+        companyUrl.startsWith("http://") || companyUrl.startsWith("https://")
+          ? companyUrl
+          : `https://${companyUrl}`;
+
+      let releases;
+      try {
+        releases = await crawlCompanyReleasePages(normalizedCompanyUrl);
+      } catch (error) {
+        logger.error("Company release crawl failed.", {
+          profileId: profileDoc.id,
+          companyUrl: normalizedCompanyUrl,
+          message: error instanceof Error ? error.message : String(error)
+        });
+        continue;
+      }
+
+      for (const release of releases) {
+        const importId = buildCompanyReleaseImportKey(release);
+        const importRef = db.doc(`profiles/${profileDoc.id}/releaseImports/${importId}`);
+        const existingImport = await importRef.get();
+
+        if (existingImport.exists) {
+          continue;
+        }
+
+        const noteBody = buildCompanyReleaseNoteBody(release);
+
+        await db.collection(`profiles/${profileDoc.id}/notes`).add({
+          body: noteBody,
+          sourceType: "company_release",
+          sourceUrl: release.url,
+          sourceTitle: release.title,
+          happenedAt: FieldValue.serverTimestamp(),
+          createdByUid: ownerUid,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+
+        await importRef.set({
+          sourceUrl: release.url,
+          sourceTitle: release.title,
+          sourceBodyPreview: normalizeReleaseBody(release.body).slice(0, 500),
+          importedAt: FieldValue.serverTimestamp()
+        });
+
+        await profileDoc.ref.update({
+          noteCount: FieldValue.increment(1),
+          latestNoteAt: FieldValue.serverTimestamp(),
+          lastNoteUpdatedAt: FieldValue.serverTimestamp(),
+          summaryStatus: "pending",
+          updatedAt: FieldValue.serverTimestamp()
+        });
+
+        logger.info("Imported company release note.", {
+          profileId: profileDoc.id,
+          sourceUrl: release.url
+        });
+      }
+    }
   }
 );
