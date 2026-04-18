@@ -7,7 +7,7 @@ export type NotificationSettings = {
 };
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  pushEnabled: true,
+  pushEnabled: false,
   emailEnabled: false,
 };
 
