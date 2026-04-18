@@ -4,12 +4,49 @@ import { firebaseApp, getFirebaseConfigError } from "./client";
 
 export const PUSH_NOTIFICATION_TOKEN_KEY = "kizunanote_push_notification_token";
 
+type PushConfigResponse = {
+  vapidKey?: string;
+  error?: string;
+};
+
+let pushConfigPromise: Promise<string> | null = null;
+
 async function getMessagingModules() {
   const [{ getMessaging, getToken, deleteToken, isSupported, onMessage }] = await Promise.all([
     import("firebase/messaging"),
   ]);
 
   return { getMessaging, getToken, deleteToken, isSupported, onMessage };
+}
+
+async function getPushNotificationVapidKey() {
+  if (!pushConfigPromise) {
+    pushConfigPromise = fetch(`/api/push-config?ts=${Date.now()}`, {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as PushConfigResponse;
+
+        if (!response.ok || !payload.vapidKey) {
+          throw new Error(
+            payload.error
+              ? "NEXT_PUBLIC_FIREBASE_VAPID_KEY が設定されていません。"
+              : "プッシュ通知設定の取得に失敗しました。",
+          );
+        }
+
+        return payload.vapidKey;
+      })
+      .catch((error) => {
+        pushConfigPromise = null;
+        throw error;
+      });
+  }
+
+  return pushConfigPromise;
 }
 
 export async function isPushNotificationSupported() {
@@ -72,11 +109,7 @@ export async function requestPushNotificationToken() {
     throw new Error("ブラウザ環境でのみ通知設定を変更できます。");
   }
 
-  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-
-  if (!vapidKey) {
-    throw new Error("NEXT_PUBLIC_FIREBASE_VAPID_KEY が設定されていません。");
-  }
+  const vapidKey = await getPushNotificationVapidKey();
 
   const permission = await Notification.requestPermission();
 
