@@ -106,16 +106,27 @@ async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
   const userData = userSnapshot.exists ? userSnapshot.data() : null;
 
   if (userData?.planId !== "plus" && userData?.planId !== "pro") {
+    logger.info("Skipping birthday push notifications because plan is not eligible.", {
+      ownerUid,
+      planId: userData?.planId ?? null,
+    });
     return;
   }
 
   if (!userData?.notificationPreferences?.pushEnabled) {
+    logger.info("Skipping birthday push notifications because push is disabled.", {
+      ownerUid,
+      pushEnabled: userData?.notificationPreferences?.pushEnabled ?? null,
+    });
     return;
   }
 
   const tokensSnapshot = await db.collection(`users/${ownerUid}/notificationTokens`).get();
 
   if (tokensSnapshot.empty) {
+    logger.info("Skipping birthday push notifications because no tokens were found.", {
+      ownerUid,
+    });
     return;
   }
 
@@ -127,8 +138,19 @@ async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
     .filter(Boolean);
 
   if (!tokens.length) {
+    logger.info("Skipping birthday push notifications because token payloads were empty.", {
+      ownerUid,
+      tokenDocCount: tokensSnapshot.size,
+    });
     return;
   }
+
+  logger.info("Sending birthday push notifications.", {
+    ownerUid,
+    notificationCount: notifications.length,
+    tokenCount: tokens.length,
+    planId: userData?.planId ?? null,
+  });
 
   for (const notification of notifications) {
     const response = await getMessaging().sendEachForMulticast({
@@ -173,6 +195,13 @@ async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
         code,
         message: sendResponse.error?.message || "",
       });
+    });
+
+    logger.info("Birthday push notification send result.", {
+      ownerUid,
+      profileId: notification.profileId,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
     });
 
     await Promise.all(
@@ -918,6 +947,12 @@ export const sendBirthdayPushNotifications = onSchedule(
     const threeDaysLaterKey = getJstMonthDayKey(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
     const notificationsByOwner = new Map();
 
+    logger.info("Evaluating birthday push notification candidates.", {
+      profileCount: profilesSnapshot.size,
+      todayKey,
+      threeDaysLaterKey,
+    });
+
     for (const profileDoc of profilesSnapshot.docs) {
       const profileData = profileDoc.data();
       const ownerUid = typeof profileData.ownerUid === "string" ? profileData.ownerUid : "";
@@ -952,6 +987,15 @@ export const sendBirthdayPushNotifications = onSchedule(
       logger.info("No birthday push notifications scheduled for today.");
       return;
     }
+
+    logger.info("Birthday push notification targets prepared.", {
+      ownerCount: notificationsByOwner.size,
+      notificationsByOwner: Array.from(notificationsByOwner.entries()).map(([ownerUid, notifications]) => ({
+        ownerUid,
+        notificationCount: notifications.length,
+        profileIds: notifications.map((notification) => notification.profileId),
+      })),
+    });
 
     for (const [ownerUid, notifications] of notificationsByOwner.entries()) {
       try {
