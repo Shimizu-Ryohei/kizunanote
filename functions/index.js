@@ -248,6 +248,20 @@ function normalizeProfilePersonLabel(text) {
     .replace(/プロフィール本人/u, "本人");
 }
 
+function normalizeProfileSubject(text) {
+  return text
+    .replace(/^本人は/u, "")
+    .replace(/^本人が/u, "")
+    .replace(/^本人に/u, "")
+    .replace(/^本人を/u, "")
+    .replace(/^本人へ/u, "")
+    .replace(/^本人と/u, "")
+    .replace(/^本人も/u, "")
+    .replace(/^本人には/u, "")
+    .replace(/^本人では/u, "")
+    .trim();
+}
+
 function extractTitleFromHtml(html, fallbackUrl) {
   const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   if (h1Match?.[1]) {
@@ -619,9 +633,11 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
               "Return up to 5 bullet points, each a single sentence, prioritizing stable useful facts, preferences, relationships, and recent important context. " +
               "Merge overlap, remove redundancy, and avoid speculation. " +
               "Important interpretation rules: first-person expressions such as 私, わたし, 僕, 俺, わたくし refer to the note author, not the profile person. " +
-              "When a note says things like '私の弟', '私の妻', '私の上司', '私の部下', keep the first-person reference as the note author and rewrite them as facts about the profile person, for example '本人は私の弟', '本人は私の妻'. " +
+              "When a note says things like '私の弟', '私の妻', '私の上司', '私の部下', keep the first-person reference as the note author and rewrite them naturally as facts about the profile person, for example '私の弟', '私の妻'. " +
               "Never use the word '記録者' in the output. Use natural first-person Japanese such as '私の妻' instead. " +
               "Do not use the phrase 'プロフィール本人' in the output. Use '本人' instead when needed. " +
+              "Do not start a sentence with '本人は' or similar subject phrases when the sentence is simply describing the profile person. Omit the subject in that case. " +
+              "Use '本人の...' only when it is necessary to identify another person or relationship, such as '本人の息子'. " +
               "Do not incorrectly turn first-person statements into attributes of the profile person."
           }
         ]
@@ -636,7 +652,7 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
                 profileId,
                 fullName,
                 summaryPerspective:
-                  "対象は本人です。ノートの一人称は記録者本人を指しますが、出力では '記録者' や 'プロフィール本人' とは書かず、必要な場合は '本人' とし、自然な一人称の '私' を使ってください。たとえば『本人は私の妻』『私の上司』のように表現してください。",
+                  "対象は本人です。ノートの一人称は記録者本人を指しますが、出力では '記録者' や 'プロフィール本人' とは書かず、通常は '本人は' のような主語を省いてください。別人物との関係を示すために必要な場合だけ『本人の息子』『本人の母』のように表現してください。自然な一人称の '私' を使い、たとえば『私の妻』『私の上司』のように表現してください。",
                 existingSummaryBullets: existingBullets,
                 updatedNotes
               },
@@ -695,6 +711,7 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
     .filter((bullet) => typeof bullet === "string")
     .map((bullet) => normalizeSummaryFirstPerson(bullet))
     .map((bullet) => normalizeProfilePersonLabel(bullet))
+    .map((bullet) => normalizeProfileSubject(bullet))
     .map((bullet) => normalizeReleaseBody(bullet))
     .filter(Boolean)
     .slice(0, 5);
