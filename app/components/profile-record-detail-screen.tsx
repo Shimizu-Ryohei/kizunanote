@@ -148,7 +148,9 @@ function normalizeSummaryBulletDisplay(text: string) {
     .replace(/記録者と/g, "私と")
     .replace(/記録者も/g, "私も")
     .replace(/記録者本人/g, "私")
-    .replace(/記録者/g, "私");
+    .replace(/記録者/g, "私")
+    .replace(/^[、,\s]+/u, "")
+    .replace(/^(は|が|を|に|へ|と|も)(?=[一-龯々ァ-ヶ私僕俺])/u, "");
 }
 
 function ContactCard({

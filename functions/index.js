@@ -262,6 +262,13 @@ function normalizeProfileSubject(text) {
     .trim();
 }
 
+function normalizeDanglingLeadingParticle(text) {
+  return text
+    .replace(/^[、,\s]+/u, "")
+    .replace(/^(は|が|を|に|へ|と|も)(?=[一-龯々ァ-ヶ私僕俺])/u, "")
+    .trim();
+}
+
 function extractTitleFromHtml(html, fallbackUrl) {
   const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   if (h1Match?.[1]) {
@@ -712,6 +719,7 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
     .map((bullet) => normalizeSummaryFirstPerson(bullet))
     .map((bullet) => normalizeProfilePersonLabel(bullet))
     .map((bullet) => normalizeProfileSubject(bullet))
+    .map((bullet) => normalizeDanglingLeadingParticle(bullet))
     .map((bullet) => normalizeReleaseBody(bullet))
     .filter(Boolean)
     .slice(0, 5);
