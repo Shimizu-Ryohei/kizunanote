@@ -4,11 +4,20 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ?? "";
+  const vapidKey =
+    process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ??
+    process.env.FIREBASE_VAPID_KEY ??
+    "";
 
   if (!vapidKey) {
     return NextResponse.json(
-      { error: "NEXT_PUBLIC_FIREBASE_VAPID_KEY is not configured." },
+      {
+        error: "NEXT_PUBLIC_FIREBASE_VAPID_KEY is not configured.",
+        hasNextPublicKey: Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY),
+        hasServerOnlyKey: Boolean(process.env.FIREBASE_VAPID_KEY),
+        vercelEnv: process.env.VERCEL_ENV ?? "",
+        vercelUrl: process.env.VERCEL_URL ?? "",
+      },
       {
         status: 500,
         headers: {
@@ -19,7 +28,10 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { vapidKey },
+    {
+      vapidKey,
+      vercelEnv: process.env.VERCEL_ENV ?? "",
+    },
     {
       headers: {
         "Cache-Control": "no-store, max-age=0",

@@ -7,6 +7,10 @@ export const PUSH_NOTIFICATION_TOKEN_KEY = "kizunanote_push_notification_token";
 type PushConfigResponse = {
   vapidKey?: string;
   error?: string;
+  hasNextPublicKey?: boolean;
+  hasServerOnlyKey?: boolean;
+  vercelEnv?: string;
+  vercelUrl?: string;
 };
 
 let pushConfigPromise: Promise<string> | null = null;
@@ -33,7 +37,7 @@ async function getPushNotificationVapidKey() {
         if (!response.ok || !payload.vapidKey) {
           throw new Error(
             payload.error
-              ? "NEXT_PUBLIC_FIREBASE_VAPID_KEY が設定されていません。"
+              ? `プッシュ通知設定を取得できませんでした。env=${payload.vercelEnv || "unknown"} nextPublic=${String(payload.hasNextPublicKey)} serverOnly=${String(payload.hasServerOnlyKey)}`
               : "プッシュ通知設定の取得に失敗しました。",
           );
         }
