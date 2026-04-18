@@ -1,0 +1,81 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdminEmail(email) {
+      return email is string && email.lower() == "space.odyssey.g@gmail.com";
+    }
+
+    function expectedUserRole() {
+      return isAdminEmail(request.auth.token.email) ? "admin" : "user";
+    }
+
+    function profileOwner(profileId) {
+      return get(/databases/$(database)/documents/profiles/$(profileId)).data.ownerUid;
+    }
+
+    function isProfileOwner(profileId) {
+      return isSignedIn() && profileOwner(profileId) == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.planId == "standard"
+        && request.resource.data.subscriptionStatus == "free"
+        && request.resource.data.notificationEnabled == true
+        && request.resource.data.role == expectedUserRole();
+      allow update: if isOwner(uid)
+        && request.resource.data.planId == resource.data.planId
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.role == expectedUserRole();
+      allow delete: if isOwner(uid);
+
+      match /billingEvents/{eventId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && request.resource.data.type == "account_deleted";
+        allow update, delete: if false;
+      }
+    }
+
+    match /profiles/{profileId} {
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if isProfileOwner(profileId);
+      allow update: if isProfileOwner(profileId)
+        && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if isProfileOwner(profileId);
+
+      match /notes/{noteId} {
+        allow read: if isProfileOwner(profileId);
+        allow create: if isProfileOwner(profileId) && request.resource.data.createdByUid == request.auth.uid;
+        allow update, delete: if isProfileOwner(profileId);
+      }
+
+      match /private/{docId} {
+        allow read, write: if isProfileOwner(profileId);
+      }
+
+      match /releaseImports/{importId} {
+        allow read: if isProfileOwner(profileId);
+        allow write: if false;
+      }
+    }
+
+    match /contactInquiries/{inquiryId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -47,7 +47,7 @@ function LogCard({ profile }: { profile: ProfileListItem }) {
   const tags = [profile.workplace, profile.birthday].filter((tag): tag is string => Boolean(tag));
   const summaryStatusLabel =
     profile.summaryStatus === "pending" || profile.summaryStatus === "processing"
-      ? "要約中…明朝5:00頃完了します"
+      ? "要約中：明朝5:00頃"
       : profile.hasFreshSummaryUpdate
         ? "要約更新しました"
         : null;

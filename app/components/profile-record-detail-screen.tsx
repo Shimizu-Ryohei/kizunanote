@@ -457,7 +457,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                     <span>キズナノート要約</span>
                     {isSummaryPending ? (
                       <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-3 py-1 text-[10px] font-black tracking-[0] text-white">
-                        要約中…明朝5:00頃完了します
+                        要約中：明朝5:00頃
                       </span>
                     ) : null}
                     <button

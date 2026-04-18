@@ -20,6 +20,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -49,8 +50,8 @@ function ensureFirebaseAuth() {
 
 export const PENDING_SIGN_UP_EMAIL_KEY = "kizunanote_pending_sign_up_email";
 
-function buildUserDocumentPayload(user: User, includeCreatedAt = false) {
-  const payload: Record<string, unknown> = {
+function buildInitialUserDocumentPayload(user: User) {
+  return {
     email: user.email ?? "",
     displayName: "",
     notificationEnabled: true,
@@ -62,24 +63,27 @@ function buildUserDocumentPayload(user: User, includeCreatedAt = false) {
     planId: "standard",
     role: getUserRole(user.email),
     subscriptionStatus: "free",
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
+}
 
-  if (includeCreatedAt) {
-    payload.createdAt = serverTimestamp();
-  }
-
-  return payload;
+function buildSyncedUserDocumentPayload(user: User) {
+  return {
+    email: user.email ?? "",
+    role: getUserRole(user.email),
+    updatedAt: serverTimestamp(),
+  };
 }
 
 export async function syncUserDocument(user: User) {
   const { firestore } = ensureFirebaseAuth();
+  const userRef = doc(firestore, "users", user.uid);
+  const userSnapshot = await getDoc(userRef);
 
-  await setDoc(
-    doc(firestore, "users", user.uid),
-    buildUserDocumentPayload(user),
-    { merge: true },
-  );
+  await setDoc(userRef, userSnapshot.exists()
+    ? buildSyncedUserDocumentPayload(user)
+    : buildInitialUserDocumentPayload(user), { merge: true });
 }
 
 export async function signUpWithEmail(email: string, password: string) {
@@ -89,7 +93,7 @@ export async function signUpWithEmail(email: string, password: string) {
 
   await setDoc(
     doc(firestore, "users", user.uid),
-    buildUserDocumentPayload(user, true),
+    buildInitialUserDocumentPayload(user),
     { merge: true },
   );
 
@@ -126,7 +130,7 @@ export async function completeSignUpWithEmailLink(
 
   await setDoc(
     doc(firestore, "users", user.uid),
-    buildUserDocumentPayload(user, true),
+    buildInitialUserDocumentPayload(user),
     { merge: true },
   );
 
