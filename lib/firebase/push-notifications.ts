@@ -169,8 +169,12 @@ export async function subscribeToForegroundPushNotifications() {
   const { onMessage } = await getMessagingModules();
 
   return onMessage(messaging, (payload) => {
-    const title = payload.notification?.title || "キズナノート";
-    const body = payload.notification?.body || "";
+    if (document.visibilityState === "visible") {
+      return;
+    }
+
+    const title = payload.data?.title || payload.notification?.title || "キズナノート";
+    const body = payload.data?.body || payload.notification?.body || "";
     const path = payload.data?.path || "/home";
     const notification = new Notification(title, { body });
 

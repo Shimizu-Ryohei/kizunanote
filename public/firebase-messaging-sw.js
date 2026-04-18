@@ -12,9 +12,9 @@ function initializeFirebase(config) {
   firebase.initializeApp(config);
   messaging = firebase.messaging();
   messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || "キズナノート";
+    const notificationTitle = payload.data?.title || payload.notification?.title || "キズナノート";
     const notificationOptions = {
-      body: payload.notification?.body || "",
+      body: payload.data?.body || payload.notification?.body || "",
       data: payload.data || {},
     };
 

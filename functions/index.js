@@ -129,11 +129,9 @@ async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
   for (const notification of notifications) {
     const response = await getMessaging().sendEachForMulticast({
       tokens,
-      notification: {
+      data: {
         title: "キズナノート",
         body: notification.body,
-      },
-      data: {
         path: `/profiles/${notification.profileId}`,
         profileId: notification.profileId,
       },
