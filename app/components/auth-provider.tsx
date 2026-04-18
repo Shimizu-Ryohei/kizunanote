@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let unsubscribe = () => undefined;
+    let unsubscribe: (() => void) | undefined;
 
     subscribeToForegroundPushNotifications()
       .then((cleanup) => {
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
     return () => {
-      unsubscribe();
+      unsubscribe?.();
     };
   }, [user]);
 
