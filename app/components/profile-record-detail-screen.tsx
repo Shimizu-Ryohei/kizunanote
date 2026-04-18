@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import MobileShell from "./mobile-shell";
 import PrimaryCta from "./primary-cta";
 import ProfileHeader from "./profile-header";
+import SummaryRefreshModal from "./summary-refresh-modal";
 import SuccessModal from "./success-modal";
 import UpgradeRequiredModal from "./upgrade-required-modal";
 import { useAuth } from "./auth-provider";
@@ -124,16 +125,30 @@ function SparklesIcon() {
 
 function RefreshIcon() {
   return (
-    <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none">
       <path
         d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
         stroke="currentColor"
-        strokeWidth="2.3"
+        strokeWidth="2.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
   );
+}
+
+function normalizeSummaryBulletDisplay(text: string) {
+  return text
+    .replace(/記録者の/g, "私の")
+    .replace(/記録者は/g, "私は")
+    .replace(/記録者が/g, "私が")
+    .replace(/記録者を/g, "私を")
+    .replace(/記録者に/g, "私に")
+    .replace(/記録者へ/g, "私へ")
+    .replace(/記録者と/g, "私と")
+    .replace(/記録者も/g, "私も")
+    .replace(/記録者本人/g, "私")
+    .replace(/記録者/g, "私");
 }
 
 function ContactCard({
@@ -175,6 +190,9 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
   const [isSaving, setIsSaving] = useState(false);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
   const [isSummaryRefreshing, setIsSummaryRefreshing] = useState(false);
+  const [summaryRefreshModalMode, setSummaryRefreshModalMode] = useState<
+    "closed" | "confirm" | "loading" | "success"
+  >("closed");
   const [isSummaryLatestModalOpen, setIsSummaryLatestModalOpen] = useState(false);
   const [isUpgradeRequiredModalOpen, setIsUpgradeRequiredModalOpen] = useState(false);
 
@@ -310,6 +328,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
   const summaryBullets = profile?.summaryBullets ?? [];
   const isSummaryPending =
     profile?.summaryStatus === "pending" || profile?.summaryStatus === "processing";
+  const canTriggerSummaryNow = profile?.summaryStatus === "pending" || profile?.summaryStatus === "error";
 
   const handleSaveNote = async () => {
     if (!user) {
@@ -351,17 +370,58 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         return;
       }
 
+      if (!canTriggerSummaryNow) {
+        setIsSummaryLatestModalOpen(true);
+        return;
+      }
+
+      setSummaryRefreshModalMode("confirm");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("要約の実行に失敗しました。");
+    }
+  };
+
+  const handleConfirmSummarizeNow = async () => {
+    const minimumLoadingMs = 1000;
+
+    if (!user) {
+      setSummaryRefreshModalMode("closed");
+      setErrorMessage("ログイン状態を確認できませんでした。");
+      return;
+    }
+
+    setSummaryRefreshModalMode("loading");
+
+    try {
       setIsSummaryRefreshing(true);
+      const startedAt = Date.now();
       const result = await summarizeProfileImmediately(profileId);
+      const elapsed = Date.now() - startedAt;
+
+      if (elapsed < minimumLoadingMs) {
+        await new Promise((resolve) => setTimeout(resolve, minimumLoadingMs - elapsed));
+      }
+
       const refreshed = await getProfileDetailById(profileId, user.uid);
       setProfile(refreshed);
       setErrorMessage("");
 
       if (result.status === "already_latest") {
+        setSummaryRefreshModalMode("closed");
         setIsSummaryLatestModalOpen(true);
+        return;
       }
+
+      if (result.status === "processing") {
+        setSummaryRefreshModalMode("closed");
+        return;
+      }
+
+      setSummaryRefreshModalMode("success");
     } catch (error) {
       console.error(error);
+      setSummaryRefreshModalMode("closed");
       setErrorMessage("要約の実行に失敗しました。");
     } finally {
       setIsSummaryRefreshing(false);
@@ -379,7 +439,10 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         {profile && headerProfile ? (
           <div
             className={
-              isSavedModalOpen || isSummaryLatestModalOpen || isUpgradeRequiredModalOpen
+              isSavedModalOpen ||
+              summaryRefreshModalMode !== "closed" ||
+              isSummaryLatestModalOpen ||
+              isUpgradeRequiredModalOpen
                 ? "pointer-events-none blur-md"
                 : ""
             }
@@ -387,16 +450,21 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
             <ProfileHeader profile={headerProfile} editHref={`/profiles/${profileId}/edit-profile`} />
 
             <section className="mt-4 rounded-lg bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="flex items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
+                  <h2 className="flex flex-wrap items-center gap-2 text-[14px] font-bold text-[#1f1f1f]">
                     <SparklesIcon />
                     <span>キズナノート要約</span>
+                    {isSummaryPending ? (
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-3 py-1 text-[10px] font-black tracking-[0] text-white">
+                        要約中…明朝5:00頃完了します
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       onClick={handleSummarizeNow}
                       disabled={isSummaryRefreshing}
-                      className={`m-0 inline-flex shrink-0 appearance-none items-center rounded-full border-0 bg-[var(--color-sub)] px-2 py-2 shadow-none ${
+                      className={`m-0 inline-flex shrink-0 appearance-none items-center justify-center self-center rounded-full border-0 bg-[var(--color-sub)] px-2 py-2 shadow-none ${
                         isSummaryRefreshing ? "opacity-70" : ""
                       }`}
                       aria-label="今すぐ要約する"
@@ -407,13 +475,6 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                       </span>
                     </button>
                   </h2>
-                  {isSummaryPending ? (
-                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-3">
-                      <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-3 py-1 text-[10px] font-black tracking-[0] text-white">
-                        要約中…明朝5:00頃完了します
-                      </span>
-                    </div>
-                  ) : null}
                 </div>
               </div>
               {summaryBullets.length ? (
@@ -421,7 +482,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
                   {summaryBullets.map((bullet, index) => (
                     <li key={`${index}-${bullet}`} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" />
-                      <span>{bullet}</span>
+                      <span>{normalizeSummaryBulletDisplay(bullet)}</span>
                     </li>
                   ))}
                 </ul>
@@ -487,6 +548,17 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
         ) : null}
 
         {isSavedModalOpen ? <SuccessModal onConfirm={() => setIsSavedModalOpen(false)} /> : null}
+        {summaryRefreshModalMode === "confirm" ? (
+          <SummaryRefreshModal
+            mode="confirm"
+            onCancel={() => setSummaryRefreshModalMode("closed")}
+            onConfirm={handleConfirmSummarizeNow}
+          />
+        ) : null}
+        {summaryRefreshModalMode === "loading" ? <SummaryRefreshModal mode="loading" /> : null}
+        {summaryRefreshModalMode === "success" ? (
+          <SummaryRefreshModal mode="success" onConfirm={() => setSummaryRefreshModalMode("closed")} />
+        ) : null}
         {isSummaryLatestModalOpen ? (
           <SuccessModal
             message="現在の要約は最新です"

@@ -116,6 +116,20 @@ function normalizeReleaseBody(text) {
     .trim();
 }
 
+function normalizeSummaryFirstPerson(text) {
+  return text
+    .replace(/記録者の/g, "私の")
+    .replace(/記録者は/g, "私は")
+    .replace(/記録者が/g, "私が")
+    .replace(/記録者を/g, "私を")
+    .replace(/記録者に/g, "私に")
+    .replace(/記録者へ/g, "私へ")
+    .replace(/記録者と/g, "私と")
+    .replace(/記録者も/g, "私も")
+    .replace(/記録者本人/g, "私")
+    .replace(/記録者/g, "私");
+}
+
 function extractTitleFromHtml(html, fallbackUrl) {
   const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   if (h1Match?.[1]) {
@@ -487,7 +501,8 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
               "Return up to 5 bullet points, each a single sentence, prioritizing stable useful facts, preferences, relationships, and recent important context. " +
               "Merge overlap, remove redundancy, and avoid speculation. " +
               "Important interpretation rules: first-person expressions such as 私, わたし, 僕, 俺, わたくし refer to the note author, not the profile person. " +
-              "When a note says things like '私の弟', '私の妻', '私の上司', '私の部下', rewrite them as the relationship from the profile person to the note author, for example 'プロフィール本人は記録者の弟', 'プロフィール本人は記録者の妻'. " +
+              "When a note says things like '私の弟', '私の妻', '私の上司', '私の部下', keep the first-person reference as the note author and rewrite them as facts about the profile person, for example 'プロフィール本人は私の弟', 'プロフィール本人は私の妻'. " +
+              "Never use the word '記録者' in the output. Use natural first-person Japanese such as '私の妻' instead. " +
               "Do not incorrectly turn first-person statements into attributes of the profile person."
           }
         ]
@@ -502,7 +517,7 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
                 profileId,
                 fullName,
                 summaryPerspective:
-                  "対象はプロフィール本人です。ノートの一人称は記録者本人を指します。関係性はプロフィール本人から見た表現に言い換えてください。",
+                  "対象はプロフィール本人です。ノートの一人称は記録者本人を指しますが、出力では '記録者' とは書かず、自然な一人称の '私' を使ってください。たとえば『私の妻』『私の上司』のように表現してください。",
                 existingSummaryBullets: existingBullets,
                 updatedNotes
               },
@@ -559,6 +574,7 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
 
   return parsed.bullets
     .filter((bullet) => typeof bullet === "string")
+    .map((bullet) => normalizeSummaryFirstPerson(bullet))
     .map((bullet) => normalizeReleaseBody(bullet))
     .filter(Boolean)
     .slice(0, 5);
