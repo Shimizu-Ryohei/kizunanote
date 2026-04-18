@@ -233,7 +233,7 @@ export default function AddProfileScreen() {
               <div className="grid flex-1 grid-cols-2 gap-3">
                 <FieldLabel>
                   <span>
-                    姓 <span className="text-[#6c6c6c]">（必須）</span>
+                    姓 <span className="text-[11px] text-[#d64253]">（必須）</span>
                   </span>
                   <TextInput
                     placeholder="山田"
@@ -243,7 +243,7 @@ export default function AddProfileScreen() {
                 </FieldLabel>
                 <FieldLabel>
                   <span>
-                    名 <span className="text-[#6c6c6c]">（必須）</span>
+                    名 <span className="text-[11px] text-[#d64253]">（必須）</span>
                   </span>
                   <TextInput
                     placeholder="太郎"
@@ -253,7 +253,7 @@ export default function AddProfileScreen() {
                 </FieldLabel>
                 <FieldLabel>
                   <span>
-                    せい <span className="text-[#6c6c6c]">（必須）</span>
+                    せい <span className="text-[11px] text-[#d64253]">（必須）</span>
                   </span>
                   <TextInput
                     placeholder="やまだ"
@@ -263,7 +263,7 @@ export default function AddProfileScreen() {
                 </FieldLabel>
                 <FieldLabel>
                   <span>
-                    めい <span className="text-[#6c6c6c]">（必須）</span>
+                    めい <span className="text-[11px] text-[#d64253]">（必須）</span>
                   </span>
                   <TextInput
                     placeholder="たろう"
@@ -275,7 +275,9 @@ export default function AddProfileScreen() {
             </section>
 
             <FieldLabel>
-              <span>生年月日</span>
+              <span>
+                生年月日 <span className="text-[11px] text-[#8f8f8f]">（任意）</span>
+              </span>
               <div className="flex h-[46px] items-center rounded-lg bg-white px-5 text-[#b0b0b0]">
                 <input
                   type="text"
@@ -289,7 +291,9 @@ export default function AddProfileScreen() {
             </FieldLabel>
 
             <FieldLabel>
-              <span>キズナノートを書く</span>
+              <span>
+                キズナノートを書く <span className="text-[11px] text-[#8f8f8f]">（任意）</span>
+              </span>
               <textarea
                 value={noteBody}
                 onChange={(event) => setNoteBody(event.target.value)}
