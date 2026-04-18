@@ -105,6 +105,10 @@ async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
   const userSnapshot = await db.doc(`users/${ownerUid}`).get();
   const userData = userSnapshot.exists ? userSnapshot.data() : null;
 
+  if (userData?.planId !== "plus" && userData?.planId !== "pro") {
+    return;
+  }
+
   if (!userData?.notificationPreferences?.pushEnabled) {
     return;
   }
