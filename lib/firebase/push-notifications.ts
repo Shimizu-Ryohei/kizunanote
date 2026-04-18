@@ -14,6 +14,9 @@ type PushConfigResponse = {
 };
 
 let pushConfigPromise: Promise<string> | null = null;
+let cachedPushConfigVapidKey = "";
+let pushConfigLastFailureAt = 0;
+const PUSH_CONFIG_RETRY_COOLDOWN_MS = 5000;
 
 async function getMessagingModules() {
   const [{ getMessaging, getToken, deleteToken, isSupported, onMessage }] = await Promise.all([
@@ -24,6 +27,17 @@ async function getMessagingModules() {
 }
 
 async function getPushNotificationVapidKey() {
+  if (cachedPushConfigVapidKey) {
+    return cachedPushConfigVapidKey;
+  }
+
+  if (
+    pushConfigLastFailureAt &&
+    Date.now() - pushConfigLastFailureAt < PUSH_CONFIG_RETRY_COOLDOWN_MS
+  ) {
+    throw new Error("プッシュ通知設定の取得に失敗しました。少し待ってから再度お試しください。");
+  }
+
   if (!pushConfigPromise) {
     pushConfigPromise = fetch(`/api/push-config?ts=${Date.now()}`, {
       cache: "no-store",
@@ -42,9 +56,12 @@ async function getPushNotificationVapidKey() {
           );
         }
 
+        cachedPushConfigVapidKey = payload.vapidKey;
+        pushConfigLastFailureAt = 0;
         return payload.vapidKey;
       })
       .catch((error) => {
+        pushConfigLastFailureAt = Date.now();
         pushConfigPromise = null;
         throw error;
       });
