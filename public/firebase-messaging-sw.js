@@ -1,7 +1,6 @@
 importScripts("https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/12.12.0/firebase-messaging-compat.js");
 
-let messaging = null;
 let isFirebaseInitialized = false;
 
 function initializeFirebase(config) {
@@ -10,16 +9,7 @@ function initializeFirebase(config) {
   }
 
   firebase.initializeApp(config);
-  messaging = firebase.messaging();
-  messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.data?.title || payload.notification?.title || "キズナノート";
-    const notificationOptions = {
-      body: payload.data?.body || payload.notification?.body || "",
-      data: payload.data || {},
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
+  firebase.messaging();
   isFirebaseInitialized = true;
 }
 

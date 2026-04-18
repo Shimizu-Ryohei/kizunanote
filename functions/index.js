@@ -133,6 +133,10 @@ async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
   for (const notification of notifications) {
     const response = await getMessaging().sendEachForMulticast({
       tokens,
+      notification: {
+        title: "キズナノート",
+        body: notification.body,
+      },
       data: {
         title: "キズナノート",
         body: notification.body,
