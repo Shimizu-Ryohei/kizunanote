@@ -23,11 +23,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 1. Create a Firebase project and add a Web App in the Firebase console.
 2. Copy `.env.local.example` to `.env.local`.
 3. Fill in the `NEXT_PUBLIC_FIREBASE_*` values from your Firebase Web App config.
-4. Fill in `OPENAI_API_KEY` if you want to enable daily profile summarization.
-4. Use [`lib/firebase/client.ts`](/Users/ryoheishimizu/kizunanote/lib/firebase/client.ts) to access:
+4. Fill in `NEXT_PUBLIC_FIREBASE_VAPID_KEY` if you want to enable web push notifications.
+5. Fill in `OPENAI_API_KEY` if you want to enable daily profile summarization.
+6. Use [`lib/firebase/client.ts`](/Users/ryoheishimizu/kizunanote/lib/firebase/client.ts) to access:
    - `firebaseAuth`
    - `firestore`
    - `storage`
+
+## Birthday Push Notifications
+
+- Push notifications are sent at `08:00` (`Asia/Tokyo`).
+- Users who enable push notifications receive birthday reminders 3 days before and on the day itself.
+- Device tokens are stored at `users/{uid}/notificationTokens/{tokenId}`.
 
 ## Scheduled Summaries
 

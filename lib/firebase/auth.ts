@@ -54,9 +54,9 @@ function buildInitialUserDocumentPayload(user: User) {
   return {
     email: user.email ?? "",
     displayName: "",
-    notificationEnabled: true,
+    notificationEnabled: false,
     notificationPreferences: {
-      pushEnabled: true,
+      pushEnabled: false,
       emailEnabled: false,
       updatedAt: serverTimestamp(),
     },

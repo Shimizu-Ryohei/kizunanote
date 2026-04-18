@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 import { defineSecret } from "firebase-functions/params";
 import logger from "firebase-functions/logger";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
@@ -17,6 +18,7 @@ const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
 const COMPANY_CRAWL_MAX_PAGES = 8;
 const COMPANY_CRAWL_PAGE_TIMEOUT_MS = 15000;
 const COMPANY_CRAWL_SCHEDULE = "0 0,16 * * *";
+const BIRTHDAY_PUSH_SCHEDULE = "0 8 * * *";
 
 function truncateNoteBody(body) {
   return body.length > MAX_NOTE_BODY_LENGTH ? `${body.slice(0, MAX_NOTE_BODY_LENGTH)}...` : body;
@@ -57,19 +59,122 @@ function normalizeSummaryBullet(value) {
 }
 
 function getJstNowParts() {
+  return getJstDateParts(new Date());
+}
+
+function getJstDateParts(date) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
   });
-  const parts = formatter.formatToParts(new Date());
+  const parts = formatter.formatToParts(date);
 
   return {
     year: parts.find((part) => part.type === "year")?.value || "",
     month: parts.find((part) => part.type === "month")?.value || "",
     day: parts.find((part) => part.type === "day")?.value || ""
   };
+}
+
+function getMonthDayKeyFromBirthday(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const [, month, day] = value.split("-");
+
+  if (!month || !day) {
+    return "";
+  }
+
+  return `${month}-${day}`;
+}
+
+function getJstMonthDayKey(date) {
+  const { month, day } = getJstDateParts(date);
+  return `${month}-${day}`;
+}
+
+function getNotificationTokenDocId(token) {
+  return encodeURIComponent(token);
+}
+
+async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
+  const userSnapshot = await db.doc(`users/${ownerUid}`).get();
+  const userData = userSnapshot.exists ? userSnapshot.data() : null;
+
+  if (!userData?.notificationPreferences?.pushEnabled) {
+    return;
+  }
+
+  const tokensSnapshot = await db.collection(`users/${ownerUid}/notificationTokens`).get();
+
+  if (tokensSnapshot.empty) {
+    return;
+  }
+
+  const tokens = tokensSnapshot.docs
+    .map((docSnapshot) => {
+      const data = docSnapshot.data();
+      return typeof data.token === "string" ? data.token : "";
+    })
+    .filter(Boolean);
+
+  if (!tokens.length) {
+    return;
+  }
+
+  for (const notification of notifications) {
+    const response = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: {
+        title: "キズナノート",
+        body: notification.body,
+      },
+      data: {
+        path: `/profiles/${notification.profileId}`,
+        profileId: notification.profileId,
+      },
+      webpush: {
+        fcmOptions: {
+          link: `/profiles/${notification.profileId}`,
+        },
+      },
+    });
+
+    const invalidTokens = [];
+
+    response.responses.forEach((sendResponse, index) => {
+      if (sendResponse.success) {
+        return;
+      }
+
+      const code = sendResponse.error?.code || "";
+
+      if (
+        code === "messaging/invalid-registration-token" ||
+        code === "messaging/registration-token-not-registered"
+      ) {
+        invalidTokens.push(tokens[index]);
+      }
+
+      logger.error("Birthday push notification failed.", {
+        ownerUid,
+        profileId: notification.profileId,
+        token: tokens[index],
+        code,
+        message: sendResponse.error?.message || "",
+      });
+    });
+
+    await Promise.all(
+      invalidTokens.map((token) =>
+        db.doc(`users/${ownerUid}/notificationTokens/${getNotificationTokenDocId(token)}`).delete(),
+      ),
+    );
+  }
 }
 
 function buildTodayDatePatterns() {
@@ -744,6 +849,73 @@ export const summarizeProfileNow = onCall(
 
     const result = await runProfileSummary(profileSnapshot);
     return result;
+  }
+);
+
+export const sendBirthdayPushNotifications = onSchedule(
+  {
+    schedule: BIRTHDAY_PUSH_SCHEDULE,
+    timeZone: "Asia/Tokyo",
+    region: "asia-northeast1",
+  },
+  async () => {
+    const profilesSnapshot = await db.collection("profiles").select("ownerUid", "birthday", "fullName").get();
+
+    if (profilesSnapshot.empty) {
+      logger.info("No profiles found for birthday push notifications.");
+      return;
+    }
+
+    const todayKey = getJstMonthDayKey(new Date());
+    const threeDaysLaterKey = getJstMonthDayKey(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+    const notificationsByOwner = new Map();
+
+    for (const profileDoc of profilesSnapshot.docs) {
+      const profileData = profileDoc.data();
+      const ownerUid = typeof profileData.ownerUid === "string" ? profileData.ownerUid : "";
+      const birthdayKey = getMonthDayKeyFromBirthday(profileData.birthday);
+      const fullName = typeof profileData.fullName === "string" ? profileData.fullName.trim() : "";
+
+      if (!ownerUid || !birthdayKey || !fullName) {
+        continue;
+      }
+
+      let body = "";
+
+      if (birthdayKey === todayKey) {
+        body = `今日は${fullName}さんの誕生日です！`;
+      } else if (birthdayKey === threeDaysLaterKey) {
+        body = `3日後に${fullName}さんの誕生日です！`;
+      }
+
+      if (!body) {
+        continue;
+      }
+
+      const currentNotifications = notificationsByOwner.get(ownerUid) ?? [];
+      currentNotifications.push({
+        profileId: profileDoc.id,
+        body,
+      });
+      notificationsByOwner.set(ownerUid, currentNotifications);
+    }
+
+    if (!notificationsByOwner.size) {
+      logger.info("No birthday push notifications scheduled for today.");
+      return;
+    }
+
+    for (const [ownerUid, notifications] of notificationsByOwner.entries()) {
+      try {
+        await sendBirthdayPushNotificationsForUser(ownerUid, notifications);
+      } catch (error) {
+        logger.error("Failed to send birthday push notifications.", {
+          ownerUid,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : null,
+        });
+      }
+    }
   }
 );
 

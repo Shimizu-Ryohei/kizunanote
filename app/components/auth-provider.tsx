@@ -12,6 +12,7 @@ import {
 } from "react";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { syncUserDocument } from "@/lib/firebase/auth";
+import { subscribeToForegroundPushNotifications } from "@/lib/firebase/push-notifications";
 
 type AuthContextValue = {
   isLoading: boolean;
@@ -49,6 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let unsubscribe = () => undefined;
+
+    subscribeToForegroundPushNotifications()
+      .then((cleanup) => {
+        unsubscribe = cleanup;
+      })
+      .catch((error) => {
+        console.error("Failed to subscribe to foreground push notifications", error);
+      });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user]);
 
   const value = useMemo(
     () => ({

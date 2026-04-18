@@ -4,10 +4,17 @@ import { useEffect, useState } from "react";
 import MobileShell from "./mobile-shell";
 import { useAuth } from "./auth-provider";
 import {
+  deletePushNotificationToken,
   getNotificationSettings,
+  savePushNotificationToken,
   updateNotificationSettings,
   type NotificationSettings,
 } from "@/lib/firebase/notification-settings";
+import {
+  isPushNotificationSupported,
+  removeCurrentPushNotificationToken,
+  requestPushNotificationToken,
+} from "@/lib/firebase/push-notifications";
 
 function NotificationToggle({
   label,
@@ -60,6 +67,16 @@ export default function NotificationSettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isPushSupported, setIsPushSupported] = useState(false);
+
+  useEffect(() => {
+    isPushNotificationSupported()
+      .then(setIsPushSupported)
+      .catch((error) => {
+        console.error(error);
+        setIsPushSupported(false);
+      });
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -102,9 +119,10 @@ export default function NotificationSettingsScreen() {
       return;
     }
 
+    const nextValue = !settings[key];
     const nextSettings = {
       ...settings,
-      [key]: !settings[key],
+      [key]: nextValue,
     };
 
     setSettings(nextSettings);
@@ -112,11 +130,30 @@ export default function NotificationSettingsScreen() {
     setErrorMessage("");
 
     try {
+      if (key === "pushEnabled") {
+        if (nextValue) {
+          if (!isPushSupported) {
+            throw new Error("このブラウザではプッシュ通知を利用できません。");
+          }
+
+          const token = await requestPushNotificationToken();
+          await savePushNotificationToken(user.uid, token);
+        } else {
+          const token = await removeCurrentPushNotificationToken();
+
+          if (token) {
+            await deletePushNotificationToken(user.uid, token);
+          }
+        }
+      }
+
       await updateNotificationSettings(user.uid, nextSettings);
     } catch (error) {
       console.error(error);
       setSettings(settings);
-      setErrorMessage("通知設定の保存に失敗しました。");
+      setErrorMessage(
+        error instanceof Error ? error.message : "通知設定の保存に失敗しました。",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -139,7 +176,7 @@ export default function NotificationSettingsScreen() {
                 enabled={settings.pushEnabled}
                 onToggle={() => handleToggle("pushEnabled")}
                 disabled={isSaving}
-                note="ホーム画面にWEBアプリとして追加するとプッシュ通知を受け取ることができます"
+                note="ホーム画面にWEBアプリとして追加し、通知を許可すると誕生日通知を受け取れます"
               />
               <NotificationToggle
                 label="メール通知"

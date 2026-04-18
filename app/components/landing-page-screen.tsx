@@ -87,12 +87,12 @@ export default function LandingPageScreen() {
 
         <section className="mt-5 space-y-4 px-5">
           <FeatureCard
-            title="相手のことを自然に思い出せる"
-            description="キズナノートに会話内容や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。"
+            title="「この人の趣味なんだっけ…家族は…」なんて二度と悩まない"
+            description="キズナノートに大切な人との会話内容や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。"
           />
           <FeatureCard
             title="AIがキズナノートを要約"
-            description="登録したキズナノートは毎朝自動で要約されます。勤務先や誕生日など、その人を表す情報を一覧や詳細で見返せます。"
+            description="登録したキズナノートは毎朝自動で要約されます。勤務先や誕生日、趣味や家族情報など、その人を表す情報を一覧や詳細で見返せます。"
           />
           <FeatureCard
             title="連絡のきっかけを逃さない"

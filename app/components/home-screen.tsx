@@ -47,42 +47,44 @@ function LogCard({ profile }: { profile: ProfileListItem }) {
   const tags = [profile.workplace, profile.birthday].filter((tag): tag is string => Boolean(tag));
   const summaryStatusLabel =
     profile.summaryStatus === "pending" || profile.summaryStatus === "processing"
-      ? "要約中：明朝5:00頃"
+      ? "要約中…"
       : profile.hasFreshSummaryUpdate
         ? "要約更新しました"
         : null;
 
   return (
     <Link href={`/profiles/${profile.id}`} className="block">
-      <article className="flex min-h-[112px] items-center gap-7 rounded-lg bg-white px-7 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
-        <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f0f0f0] text-[20px] font-bold text-[#c8c8c8]">
+      <article className="flex min-h-[92px] items-center gap-4 rounded-lg bg-white px-5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
+        <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f0f0f0] text-[18px] font-bold text-[#c8c8c8]">
           {profile.photoUrl ? (
             <Image
               alt=""
               className="h-full w-full object-cover"
-              height={58}
+              height={52}
               src={profile.photoUrl}
-              width={58}
+              width={52}
             />
           ) : (
             `${profile.lastName.charAt(0)}${profile.firstName.charAt(0)}`.trim() || "?"
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[20px] font-black tracking-[0] text-[#252525]">
-            {profile.fullName}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="min-w-0 shrink truncate text-[18px] font-black tracking-[0] text-[#252525]">
+              {profile.fullName}
+            </h2>
+            {summaryStatusLabel ? (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-2.5 py-1 text-[10px] font-black tracking-[0] text-white">
+                {summaryStatusLabel}
+              </span>
+            ) : null}
+          </div>
           {summaryStatusLabel || tags.length ? (
-            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-3">
-              {summaryStatusLabel ? (
-                <span className="inline-flex shrink-0 items-center rounded-full bg-[var(--color-main)] px-3 py-1 text-[10px] font-black tracking-[0] text-white">
-                  {summaryStatusLabel}
-                </span>
-              ) : null}
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="max-w-[148px] truncate rounded-full bg-[var(--color-sub)] px-3 py-1 text-[9px] font-black tracking-[0] text-[var(--color-main)]"
+                  className="max-w-[132px] truncate rounded-full bg-[var(--color-sub)] px-2.5 py-1 text-[9px] font-black tracking-[0] text-[var(--color-main)]"
                   title={tag}
                 >
                   {tag}

@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { firestore, getFirebaseConfigError } from "./client";
 
 export type NotificationSettings = {
@@ -47,6 +47,7 @@ export async function updateNotificationSettings(uid: string, input: Notificatio
   await setDoc(
     doc(firestore, "users", uid),
     {
+      notificationEnabled: input.pushEnabled || input.emailEnabled,
       notificationPreferences: {
         pushEnabled: input.pushEnabled,
         emailEnabled: input.emailEnabled,
@@ -56,4 +57,33 @@ export async function updateNotificationSettings(uid: string, input: Notificatio
     },
     { merge: true },
   );
+}
+
+function getNotificationTokenDocId(token: string) {
+  return encodeURIComponent(token);
+}
+
+export async function savePushNotificationToken(uid: string, token: string) {
+  if (!firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  await setDoc(
+    doc(firestore, "users", uid, "notificationTokens", getNotificationTokenDocId(token)),
+    {
+      token,
+      platform: "web",
+      userAgent: typeof navigator === "undefined" ? "" : navigator.userAgent,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export async function deletePushNotificationToken(uid: string, token: string) {
+  if (!firestore) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  await deleteDoc(doc(firestore, "users", uid, "notificationTokens", getNotificationTokenDocId(token)));
 }
