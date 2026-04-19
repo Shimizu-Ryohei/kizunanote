@@ -618,6 +618,77 @@ function cleanWorkplaceLabel(value) {
     .trim();
 }
 
+function isWeakWorkplaceLabel(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return true;
+  }
+
+  const weakExactLabels = new Set([
+    "株式会社",
+    "有限会社",
+    "合同会社",
+    "会社",
+    "勤務先",
+    "所属先",
+    "所属",
+    "現職",
+    "職場",
+    "開発部",
+    "営業部",
+    "管理部",
+    "人事部",
+    "広報部",
+    "マーケティング部",
+    "代表",
+    "社長",
+    "取締役",
+    "部長",
+    "課長",
+    "主任",
+    "マネージャー",
+  ]);
+
+  if (weakExactLabels.has(normalized)) {
+    return true;
+  }
+
+  if (/^(?:株式会社|有限会社|合同会社)の/u.test(normalized)) {
+    return true;
+  }
+
+  if (/^(?:勤務先|所属先|所属|会社|現職|職場)[は:：]*/u.test(normalized)) {
+    return true;
+  }
+
+  if (/^(?:開発部|営業部|管理部|人事部|広報部|マーケティング部)(?:$|の)/u.test(normalized)) {
+    return true;
+  }
+
+  if (/^[^\p{L}\p{N}]*$/u.test(normalized)) {
+    return true;
+  }
+
+  return false;
+}
+
+function resolveWorkplaceTag(nextCandidate, existingTag) {
+  const normalizedNext = cleanWorkplaceLabel(nextCandidate || "");
+
+  if (!isWeakWorkplaceLabel(normalizedNext)) {
+    return normalizedNext;
+  }
+
+  const normalizedExisting = cleanWorkplaceLabel(existingTag || "");
+
+  if (!isWeakWorkplaceLabel(normalizedExisting)) {
+    return normalizedExisting;
+  }
+
+  return null;
+}
+
 function extractCurrentWorkplace(bullets) {
   const normalizedBullets = bullets.map(normalizeSummaryBullet).filter(Boolean);
   const contextualPatterns = [
@@ -817,7 +888,10 @@ async function runProfileSummary(profileDoc) {
     existingBullets: Array.isArray(summaryData?.bullets) ? summaryData.bullets : [],
     updatedNotes
   });
-  const workplaceTag = extractCurrentWorkplace(bullets);
+  const workplaceTag = resolveWorkplaceTag(
+    extractCurrentWorkplace(bullets),
+    profileData.workplaceTag,
+  );
   const now = FieldValue.serverTimestamp();
 
   await summaryRef.set(
