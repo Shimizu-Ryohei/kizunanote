@@ -605,22 +605,22 @@ function cleanWorkplaceLabel(value) {
   const trimTrailingContext = (label) =>
     label
       .replace(
-        /(?:(?:で|に|の|を)\s*)?(?:勤務(?:している)?|働(?:いている|く)|勤め(?:ている)?|所属(?:している)?|経営(?:している)?|運営(?:している)?|主宰(?:している)?).*/u,
+        /(?:(?:で|に|の|を)\s*)?(?:勤務(?:している|した|し)?|働(?:いている|いた|く)?|勤め(?:ている|た|る)?|所属(?:している|した|し)?|経営(?:している|した|し)?|運営(?:している|した|し)?|主宰(?:している|した|し)?|出向(?:している|した|し)?).*/u,
         ""
       )
       .replace(
-        /(?:(?:で|に|の|を)\s*)?(?:活動(?:している)?|務め(?:ている)?|担当(?:している)?).*/u,
+        /(?:(?:で|に|の|を)\s*)?(?:活動(?:している|した|し)?|務め(?:ている|た|る)?|担当(?:している|した|し)?).*/u,
         ""
       )
       .replace(/[。．、,，\s]+$/u, "")
       .trim();
 
   const corporateMatch = normalized.match(
-    /((?:株式会社|有限会社|合同会社)\s*[^\s。．、,，]+(?:\s*[^\s。．、,，]+){0,3}?)(?=(?:(?:で|に|の|を)\s*)?(?:勤務|働|勤め|所属|経営|運営|主宰|活動|務め|担当)|[はがをにで、,，。．\s]|$)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
+    /((?:株式会社|有限会社|合同会社)\s*[^\s。．、,，]+(?:\s*[^\s。．、,，]+){0,3}?)(?=(?:(?:で|に|の|を)\s*)?(?:勤務|働|勤め|所属|経営|運営|主宰|活動|務め|担当|出向)|[はがをにで、,，。．\s]|$)|((?:[^\s。．、,，]+(?:\s*[^\s。．、,，]+){0,3}?)\s*(?:株式会社|有限会社|合同会社))(?=(?:(?:で|に|の|を)\s*)?(?:勤務|働|勤め|所属|経営|運営|主宰|活動|務め|担当|出向)|[はがをにで、,，。．\s]|$)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
   );
 
   if (corporateMatch) {
-    return trimTrailingContext((corporateMatch[1] ?? corporateMatch[2] ?? "").trim());
+    return trimTrailingContext((corporateMatch[1] ?? corporateMatch[2] ?? corporateMatch[3] ?? "").trim());
   }
 
   const organizationMatch = normalized.match(
@@ -759,14 +759,18 @@ function extractCurrentWorkplaceCandidates(bullets) {
     /(.+?)で(?:[^。．、,，]{0,24}?として)?働(?:いている|く)/u,
     /(.+?)の[^。．、,，]{0,24}?として働(?:いている|く)/u,
     /(.+?)に勤め(?:ている)?/u,
-    /(.+?)に所属(?:している)?/u,
+    /(.+?)に所属(?:している|し)?/u,
+    /(.+?)に出向(?:している|し)?/u,
+    /(.+?)の代表取締役/u,
+    /(.+?)の(?:社長|会長|CEO|COO|CFO|理事長|院長|学長)/u,
     /(.+?)を経営(?:している)?/u,
     /(.+?)を運営(?:している)?/u,
     /(.+?)を主宰(?:している)?/u
   ];
   const directPatterns = [
     /((?:株式会社|有限会社|合同会社)[^。．、,，]*)/u,
-    /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社)[^。．、,，]*)/u,
+    /([^。．、,，]*(?:株式会社|有限会社|合同会社)[^。．、,，]*)/u,
+    /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社|病院|学校|センター|協会|法人)[^。．、,，]*)/u,
     /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
   ];
   const candidates = [];
