@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Project Docs
+
+- [Project Memory](/Users/ryoheishimizu/kizunanote/docs/project-memory.md)
+- [Firebase Architecture](/Users/ryoheishimizu/kizunanote/docs/firebase-architecture.md)
+- [Infrastructure Overview](/Users/ryoheishimizu/kizunanote/docs/infra-overview.md)
+
 ## Getting Started
 
 First, run the development server:
