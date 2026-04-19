@@ -583,8 +583,15 @@ function createStableDocId(value) {
   return createHash("sha256").update(value).digest("hex").slice(0, 40);
 }
 
+function normalizeCorporateTypeTypos(value) {
+  return String(value || "")
+    .replace(/株式会(?!社)/gu, "株式会社")
+    .replace(/有限会(?!社)/gu, "有限会社")
+    .replace(/合同会(?!社)/gu, "合同会社");
+}
+
 function cleanWorkplaceLabel(value) {
-  const normalized = value
+  const normalized = normalizeCorporateTypeTypos(value)
     .replace(/^.*(?:現在|現職|いま|今)/u, "")
     .replace(/^(?:現在|現職|いま|今)[、,\s]*/u, "")
     .replace(/^(現在の)?(?:勤務先|所属先|所属|会社|現職)[は:：\s]*/u, "")
@@ -704,6 +711,46 @@ function resolveWorkplaceTag(nextCandidate, existingTag) {
   return null;
 }
 
+function scoreWorkplaceCandidate({ bullet, candidate, kind }) {
+  const normalizedBullet = String(bullet || "");
+  const normalizedCandidate = String(candidate || "");
+  let score = kind === "contextual" ? 20 : 10;
+
+  if (!normalizedCandidate) {
+    return -100;
+  }
+
+  if (new RegExp(`${normalizedCandidate}(?:の)?(?:代表取締役|社長|会長|CEO|COO|CFO|理事長|院長|学長)`, "u").test(normalizedBullet)) {
+    score += 120;
+  }
+
+  if (new RegExp(`${normalizedCandidate}(?:の)?(?:取締役|執行役員|役員|共同創業者|創業者|オーナー|代表)`, "u").test(normalizedBullet)) {
+    score += 80;
+  }
+
+  if (new RegExp(`${normalizedCandidate}(?:を)?(?:経営|運営|主宰)`, "u").test(normalizedBullet)) {
+    score += 60;
+  }
+
+  if (new RegExp(`${normalizedCandidate}(?:に|で)(?:勤務|勤め|所属|働)`, "u").test(normalizedBullet)) {
+    score += 30;
+  }
+
+  if (new RegExp(`${normalizedCandidate}(?:に)?出向`, "u").test(normalizedBullet)) {
+    score -= 40;
+  }
+
+  if (/出向/u.test(normalizedBullet) && !new RegExp(`${normalizedCandidate}(?:に)?出向`, "u").test(normalizedBullet)) {
+    score -= 10;
+  }
+
+  if (/兼務|複数/u.test(normalizedBullet)) {
+    score -= 5;
+  }
+
+  return score;
+}
+
 function extractCurrentWorkplaceCandidates(bullets) {
   const normalizedBullets = bullets.map(normalizeSummaryBullet).filter(Boolean);
   const contextualPatterns = [
@@ -732,9 +779,14 @@ function extractCurrentWorkplaceCandidates(bullets) {
       if (candidate) {
         candidates.push({
           bullet,
-          candidate,
+          candidate: normalizeCorporateTypeTypos(candidate),
           kind: "contextual",
-          weak: isWeakWorkplaceLabel(candidate),
+          weak: isWeakWorkplaceLabel(normalizeCorporateTypeTypos(candidate)),
+          score: scoreWorkplaceCandidate({
+            bullet,
+            candidate: normalizeCorporateTypeTypos(candidate),
+            kind: "contextual",
+          }),
         });
       }
     }
@@ -748,15 +800,30 @@ function extractCurrentWorkplaceCandidates(bullets) {
       if (candidate) {
         candidates.push({
           bullet,
-          candidate,
+          candidate: normalizeCorporateTypeTypos(candidate),
           kind: "direct",
-          weak: isWeakWorkplaceLabel(candidate),
+          weak: isWeakWorkplaceLabel(normalizeCorporateTypeTypos(candidate)),
+          score: scoreWorkplaceCandidate({
+            bullet,
+            candidate: normalizeCorporateTypeTypos(candidate),
+            kind: "direct",
+          }),
         });
       }
     }
   }
 
-  return candidates;
+  return candidates.sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+
+    if (left.weak !== right.weak) {
+      return Number(left.weak) - Number(right.weak);
+    }
+
+    return Number(right.kind === "contextual") - Number(left.kind === "contextual");
+  });
 }
 
 function extractCurrentWorkplace(bullets) {
