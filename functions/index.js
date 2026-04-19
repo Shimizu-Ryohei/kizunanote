@@ -595,27 +595,42 @@ function cleanWorkplaceLabel(value) {
     .replace(/[。．、,，\s]+$/u, "")
     .trim();
 
+  const trimTrailingContext = (label) =>
+    label
+      .replace(
+        /(?:(?:で|に|の|を)\s*)?(?:勤務(?:している)?|働(?:いている|く)|勤め(?:ている)?|所属(?:している)?|経営(?:している)?|運営(?:している)?|主宰(?:している)?).*/u,
+        ""
+      )
+      .replace(
+        /(?:(?:で|に|の|を)\s*)?(?:活動(?:している)?|務め(?:ている)?|担当(?:している)?).*/u,
+        ""
+      )
+      .replace(/[。．、,，\s]+$/u, "")
+      .trim();
+
   const corporateMatch = normalized.match(
-    /((?:株式会社|有限会社|合同会社)[^\s。．、,，]*)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
+    /((?:株式会社|有限会社|合同会社)\s*[^\s。．、,，]+(?:\s*[^\s。．、,，]+){0,3}?)(?=(?:(?:で|に|の|を)\s*)?(?:勤務|働|勤め|所属|経営|運営|主宰|活動|務め|担当)|[はがをにで、,，。．\s]|$)|([A-Z][A-Za-z0-9&'.\-/ ]{1,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
   );
 
   if (corporateMatch) {
-    return (corporateMatch[1] ?? corporateMatch[2] ?? "").trim();
+    return trimTrailingContext((corporateMatch[1] ?? corporateMatch[2] ?? "").trim());
   }
 
   const organizationMatch = normalized.match(
-    /([^。．、,，\s]+(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|病院|学校))/u
+    /([^。．、,，\s]+(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|病院|学校|センター|会|協会|法人|園|庁|館))/u
   );
 
   if (organizationMatch) {
-    return organizationMatch[1].trim();
+    return trimTrailingContext(organizationMatch[1].trim());
   }
 
-  return normalized
+  return trimTrailingContext(
+    normalized
     .replace(/[はがを].*$/u, "")
     .replace(/の(?:管理部|営業部|開発部|人事部|広報部|マーケティング部|主任|部長|課長|マネージャー|代表|社長|取締役).*/u, "")
     .replace(/[。．、,，\s]+$/u, "")
-    .trim();
+    .trim()
+  );
 }
 
 function isWeakWorkplaceLabel(value) {
@@ -689,7 +704,7 @@ function resolveWorkplaceTag(nextCandidate, existingTag) {
   return null;
 }
 
-function extractCurrentWorkplace(bullets) {
+function extractCurrentWorkplaceCandidates(bullets) {
   const normalizedBullets = bullets.map(normalizeSummaryBullet).filter(Boolean);
   const contextualPatterns = [
     /(.+?)に勤務(?:している)?/u,
@@ -707,6 +722,7 @@ function extractCurrentWorkplace(bullets) {
     /([^。．、,，]*(?:スタジオ|studio|Studio|STUDIO|工房|事務所|研究所|ラボ|会社)[^。．、,，]*)/u,
     /([A-Z][A-Za-z0-9&'.\-/ ]{2,}(?:Holdings|Group|Partners|Corporation|Company|Inc\.?|LLC|Ltd\.?|Studio|Works|Design|Creative|Lab))/u
   ];
+  const candidates = [];
 
   for (const bullet of normalizedBullets) {
     for (const pattern of contextualPatterns) {
@@ -714,7 +730,12 @@ function extractCurrentWorkplace(bullets) {
       const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
 
       if (candidate) {
-        return candidate;
+        candidates.push({
+          bullet,
+          candidate,
+          kind: "contextual",
+          weak: isWeakWorkplaceLabel(candidate),
+        });
       }
     }
   }
@@ -725,9 +746,29 @@ function extractCurrentWorkplace(bullets) {
       const candidate = cleanWorkplaceLabel(match?.[1] ?? "");
 
       if (candidate) {
-        return candidate;
+        candidates.push({
+          bullet,
+          candidate,
+          kind: "direct",
+          weak: isWeakWorkplaceLabel(candidate),
+        });
       }
     }
+  }
+
+  return candidates;
+}
+
+function extractCurrentWorkplace(bullets) {
+  const candidates = extractCurrentWorkplaceCandidates(bullets);
+  const strongCandidate = candidates.find((candidate) => !candidate.weak);
+
+  if (strongCandidate) {
+    return strongCandidate.candidate;
+  }
+
+  if (candidates.length) {
+    return candidates[0].candidate;
   }
 
   return null;
@@ -888,11 +929,24 @@ async function runProfileSummary(profileDoc) {
     existingBullets: Array.isArray(summaryData?.bullets) ? summaryData.bullets : [],
     updatedNotes
   });
+  const workplaceCandidates = extractCurrentWorkplaceCandidates(bullets);
+  const extractedWorkplaceTag = workplaceCandidates.find((candidate) => !candidate.weak)?.candidate
+    ?? workplaceCandidates[0]?.candidate
+    ?? null;
   const workplaceTag = resolveWorkplaceTag(
-    extractCurrentWorkplace(bullets),
+    extractedWorkplaceTag,
     profileData.workplaceTag,
   );
   const now = FieldValue.serverTimestamp();
+
+  logger.info("Workplace tag extraction evaluated.", {
+    profileId,
+    bullets,
+    workplaceCandidates,
+    existingWorkplaceTag: profileData.workplaceTag ?? null,
+    extractedWorkplaceTag,
+    resolvedWorkplaceTag: workplaceTag,
+  });
 
   await summaryRef.set(
     {
