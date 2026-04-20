@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -17,6 +19,7 @@ const MAX_NOTE_BODY_LENGTH = 1200;
 const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
 const COMPANY_CRAWL_MAX_PAGES = 8;
 const COMPANY_CRAWL_PAGE_TIMEOUT_MS = 15000;
+const COMPANY_CRAWL_MAX_REDIRECTS = 3;
 const COMPANY_CRAWL_SCHEDULE = "0 0,16 * * *";
 const BIRTHDAY_PUSH_SCHEDULE = "0 8 * * *";
 
@@ -484,23 +487,153 @@ function isLikelyReleasePage({ url, html, text }) {
   return (releaseKeyword || sectionKeyword) && anchorCount <= 80 && text.length >= 180;
 }
 
-async function fetchTextWithTimeout(url) {
+function normalizeIpLiteral(hostname) {
+  return hostname.replace(/^\[/u, "").replace(/\]$/u, "");
+}
+
+function isPrivateIpv4(hostname) {
+  const parts = normalizeIpLiteral(hostname).split(".").map((value) => Number(value));
+
+  if (parts.length !== 4 || parts.some((value) => Number.isNaN(value) || value < 0 || value > 255)) {
+    return false;
+  }
+
+  return (
+    parts[0] === 10 ||
+    parts[0] === 127 ||
+    (parts[0] === 169 && parts[1] === 254) ||
+    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+    (parts[0] === 192 && parts[1] === 168) ||
+    (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) ||
+    parts[0] === 0
+  );
+}
+
+function isPrivateIpv6(hostname) {
+  const normalized = normalizeIpLiteral(hostname).toLowerCase();
+
+  return (
+    normalized === "::1" ||
+    normalized === "::" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe8") ||
+    normalized.startsWith("fe9") ||
+    normalized.startsWith("fea") ||
+    normalized.startsWith("feb")
+  );
+}
+
+function isDisallowedHostname(hostname) {
+  const normalized = hostname.trim().toLowerCase();
+
+  if (!normalized) {
+    return true;
+  }
+
+  if (
+    normalized === "localhost" ||
+    normalized.endsWith(".localhost") ||
+    normalized.endsWith(".local") ||
+    normalized.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  const ipVersion = isIP(normalizeIpLiteral(normalized));
+
+  if (ipVersion === 4) {
+    return isPrivateIpv4(normalized);
+  }
+
+  if (ipVersion === 6) {
+    return isPrivateIpv6(normalized);
+  }
+
+  return false;
+}
+
+async function assertSafeCompanyUrl(input, { allowHttp = true } = {}) {
+  let url;
+
+  try {
+    url = new URL(input);
+  } catch {
+    throw new Error("Company URL is invalid.");
+  }
+
+  if (!["https:", ...(allowHttp ? ["http:"] : [])].includes(url.protocol)) {
+    throw new Error(`Company URL protocol is not allowed: ${url.protocol}`);
+  }
+
+  if (url.username || url.password) {
+    throw new Error("Company URL must not include credentials.");
+  }
+
+  if (isDisallowedHostname(url.hostname)) {
+    throw new Error(`Company URL host is not allowed: ${url.hostname}`);
+  }
+
+  try {
+    const resolvedAddresses = await lookup(url.hostname, { all: true, verbatim: true });
+
+    if (
+      resolvedAddresses.some((address) =>
+        address.family === 4
+          ? isPrivateIpv4(address.address)
+          : isPrivateIpv6(address.address)
+      )
+    ) {
+      throw new Error(`Company URL resolved to a private address: ${url.hostname}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Company URL resolved to a private address")) {
+      throw error;
+    }
+
+    throw new Error(`Company URL host could not be verified: ${url.hostname}`);
+  }
+
+  return url;
+}
+
+async function fetchTextWithTimeout(url, redirectCount = 0) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), COMPANY_CRAWL_PAGE_TIMEOUT_MS);
 
   try {
+    const safeUrl = await assertSafeCompanyUrl(url);
     const response = await fetch(url, {
       headers: {
         "User-Agent": "KizunaNoteBot/1.0 (+https://kizunanote.com)"
       },
+      redirect: "manual",
       signal: controller.signal
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      if (redirectCount >= COMPANY_CRAWL_MAX_REDIRECTS) {
+        throw new Error("Too many redirects while crawling company URL.");
+      }
+
+      const location = response.headers.get("location");
+
+      if (!location) {
+        throw new Error(`Redirect response missing location header: ${response.status}`);
+      }
+
+      const redirectUrl = new URL(location, safeUrl).toString();
+      return fetchTextWithTimeout(redirectUrl, redirectCount + 1);
+    }
 
     if (!response.ok) {
       throw new Error(`Request failed: ${response.status}`);
     }
 
-    return await response.text();
+    return {
+      html: await response.text(),
+      finalUrl: response.url || safeUrl.toString(),
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -520,8 +653,11 @@ async function crawlCompanyReleasePages(companyUrl) {
     visited.add(current.url);
 
     let html;
+    let finalUrl = current.url;
     try {
-      html = await fetchTextWithTimeout(current.url);
+      const response = await fetchTextWithTimeout(current.url);
+      html = response.html;
+      finalUrl = response.finalUrl;
     } catch (error) {
       logger.warn("Failed to fetch company release page.", {
         url: current.url,
@@ -534,11 +670,11 @@ async function crawlCompanyReleasePages(companyUrl) {
     const text = stripHtml(contentHtml);
     const releaseSections = extractTodayReleaseSection(text);
 
-    if (releaseSections.length && isLikelyReleasePage({ url: current.url, html, text })) {
+    if (releaseSections.length && isLikelyReleasePage({ url: finalUrl, html, text })) {
       for (const section of releaseSections) {
         releases.push({
-          url: current.url,
-          title: section.title || extractTitleFromHtml(html, current.url),
+          url: finalUrl,
+          title: section.title || extractTitleFromHtml(html, finalUrl),
           body: section.body
         });
       }
@@ -548,7 +684,7 @@ async function crawlCompanyReleasePages(companyUrl) {
       continue;
     }
 
-    const candidateLinks = extractSameOriginLinks(current.url, html)
+    const candidateLinks = extractSameOriginLinks(finalUrl, html)
       .map((link) => ({ ...link, score: scoreCompanyReleaseLink(link.url, link.text) }))
       .filter((link) => link.score > 0)
       .sort((left, right) => right.score - left.score)
@@ -1425,10 +1561,13 @@ export const importCompanyReleaseNotes = onSchedule(
         continue;
       }
 
-      const normalizedCompanyUrl =
-        companyUrl.startsWith("http://") || companyUrl.startsWith("https://")
-          ? companyUrl
-          : `https://${companyUrl}`;
+      const normalizedCompanyUrl = (
+        await assertSafeCompanyUrl(
+          companyUrl.startsWith("http://") || companyUrl.startsWith("https://")
+            ? companyUrl
+            : `https://${companyUrl}`,
+        )
+      ).toString();
 
       let releases;
       try {

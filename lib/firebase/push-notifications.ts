@@ -5,6 +5,7 @@ import { firebaseApp, getFirebaseConfigError } from "./client";
 export const PUSH_NOTIFICATION_TOKEN_KEY = "kizunanote_push_notification_token";
 const PUSH_NOTIFICATION_LAST_SYNC_AT_KEY = "kizunanote_push_notification_last_sync_at";
 const PUSH_NOTIFICATION_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_PUSH_NOTIFICATION_PATH = "/home";
 
 type PushConfigResponse = {
   vapidKey?: string;
@@ -70,6 +71,18 @@ async function getPushNotificationVapidKey() {
   }
 
   return pushConfigPromise;
+}
+
+function getSafeInternalPushPath(value: string | undefined) {
+  if (!value) {
+    return DEFAULT_PUSH_NOTIFICATION_PATH;
+  }
+
+  if (!value.startsWith("/") || value.startsWith("//")) {
+    return DEFAULT_PUSH_NOTIFICATION_PATH;
+  }
+
+  return value;
 }
 
 export async function isPushNotificationSupported() {
@@ -221,7 +234,7 @@ export async function subscribeToForegroundPushNotifications() {
   return onMessage(messaging, (payload) => {
     const title = payload.data?.title || payload.notification?.title || "キズナノート";
     const body = payload.data?.body || payload.notification?.body || "";
-    const path = payload.data?.path || "/home";
+    const path = getSafeInternalPushPath(payload.data?.path);
     const notification = new Notification(title, { body });
 
     notification.onclick = () => {
