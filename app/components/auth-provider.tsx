@@ -12,7 +12,18 @@ import {
 } from "react";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { syncUserDocument } from "@/lib/firebase/auth";
-import { subscribeToForegroundPushNotifications } from "@/lib/firebase/push-notifications";
+import {
+  getStoredPushNotificationToken,
+  markPushNotificationTokenRefreshed,
+  requestPushNotificationToken,
+  shouldRefreshPushNotificationToken,
+  subscribeToForegroundPushNotifications,
+} from "@/lib/firebase/push-notifications";
+import {
+  deletePushNotificationToken,
+  getNotificationSettings,
+  savePushNotificationToken,
+} from "@/lib/firebase/notification-settings";
 
 type AuthContextValue = {
   isLoading: boolean;
@@ -56,10 +67,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let cancelled = false;
+
+    getNotificationSettings(user.uid)
+      .then(async (settings) => {
+        if (cancelled || !settings.pushEnabled || !shouldRefreshPushNotificationToken()) {
+          return;
+        }
+
+        const previousToken = getStoredPushNotificationToken();
+        const nextToken = await requestPushNotificationToken();
+
+        if (cancelled) {
+          return;
+        }
+
+        await savePushNotificationToken(user.uid, nextToken);
+
+        if (previousToken && previousToken !== nextToken) {
+          await deletePushNotificationToken(user.uid, previousToken);
+        }
+
+        markPushNotificationTokenRefreshed();
+      })
+      .catch((error) => {
+        console.error("Failed to refresh push notification token", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
     let unsubscribe: (() => void) | undefined;
+    let disposed = false;
 
     subscribeToForegroundPushNotifications()
       .then((cleanup) => {
+        if (disposed) {
+          cleanup();
+          return;
+        }
+
         unsubscribe = cleanup;
       })
       .catch((error) => {
@@ -67,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
     return () => {
+      disposed = true;
       unsubscribe?.();
     };
   }, [user]);

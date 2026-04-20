@@ -12,6 +12,7 @@ import {
 } from "@/lib/firebase/notification-settings";
 import {
   isPushNotificationSupported,
+  markPushNotificationTokenRefreshed,
   removeCurrentPushNotificationToken,
   requestPushNotificationToken,
 } from "@/lib/firebase/push-notifications";
@@ -138,6 +139,7 @@ export default function NotificationSettingsScreen() {
 
           const token = await requestPushNotificationToken();
           await savePushNotificationToken(user.uid, token);
+          markPushNotificationTokenRefreshed();
         } else {
           const token = await removeCurrentPushNotificationToken();
 

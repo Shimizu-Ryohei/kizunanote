@@ -841,21 +841,6 @@ function extractCurrentWorkplaceCandidates(bullets) {
   });
 }
 
-function extractCurrentWorkplace(bullets) {
-  const candidates = extractCurrentWorkplaceCandidates(bullets);
-  const strongCandidate = candidates.find((candidate) => !candidate.weak);
-
-  if (strongCandidate) {
-    return strongCandidate.candidate;
-  }
-
-  if (candidates.length) {
-    return candidates[0].candidate;
-  }
-
-  return null;
-}
-
 async function summarizeProfile({ profileId, fullName, existingBullets, updatedNotes }) {
   const payload = {
     model: OPENAI_SUMMARY_MODEL,
@@ -939,7 +924,18 @@ async function summarizeProfile({ profileId, fullName, existingBullets, updatedN
   }
 
   const responseBody = await response.json();
-  const parsed = JSON.parse(extractResponseText(responseBody));
+  const responseText = extractResponseText(responseBody);
+  let parsed;
+
+  try {
+    parsed = JSON.parse(responseText);
+  } catch (error) {
+    throw new Error(
+      `OpenAI summary payload could not be parsed as JSON for profile ${profileId}: ${
+        error instanceof Error ? error.message : String(error)
+      }. Response preview: ${responseText.slice(0, 300)}`,
+    );
+  }
 
   if (!Array.isArray(parsed.bullets)) {
     throw new Error("OpenAI summary payload is invalid.");

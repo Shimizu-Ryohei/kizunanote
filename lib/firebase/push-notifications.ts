@@ -3,6 +3,8 @@
 import { firebaseApp, getFirebaseConfigError } from "./client";
 
 export const PUSH_NOTIFICATION_TOKEN_KEY = "kizunanote_push_notification_token";
+const PUSH_NOTIFICATION_LAST_SYNC_AT_KEY = "kizunanote_push_notification_last_sync_at";
+const PUSH_NOTIFICATION_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 type PushConfigResponse = {
   vapidKey?: string;
@@ -154,6 +156,36 @@ export async function requestPushNotificationToken() {
   return token;
 }
 
+export function getStoredPushNotificationToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem(PUSH_NOTIFICATION_TOKEN_KEY) ?? "";
+}
+
+export function shouldRefreshPushNotificationToken() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const lastSyncedAt = Number(window.localStorage.getItem(PUSH_NOTIFICATION_LAST_SYNC_AT_KEY) ?? "0");
+
+  if (!lastSyncedAt) {
+    return true;
+  }
+
+  return Date.now() - lastSyncedAt >= PUSH_NOTIFICATION_SYNC_INTERVAL_MS;
+}
+
+export function markPushNotificationTokenRefreshed() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(PUSH_NOTIFICATION_LAST_SYNC_AT_KEY, String(Date.now()));
+}
+
 export async function removeCurrentPushNotificationToken() {
   if (typeof window === "undefined") {
     return "";
@@ -174,6 +206,7 @@ export async function removeCurrentPushNotificationToken() {
   }
 
   window.localStorage.removeItem(PUSH_NOTIFICATION_TOKEN_KEY);
+  window.localStorage.removeItem(PUSH_NOTIFICATION_LAST_SYNC_AT_KEY);
   return existingToken;
 }
 
