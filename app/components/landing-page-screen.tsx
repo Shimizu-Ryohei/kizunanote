@@ -87,7 +87,7 @@ export default function LandingPageScreen() {
 
         <section className="mt-5 space-y-4 px-5">
           <FeatureCard
-            title="「この人の趣味なんだっけ…家族は…」なんて二度と悩まない"
+            title="「この人の趣味なんだっけ…家族は…」できる経営者やトップ営業は全部覚えてる"
             description="キズナノートに大切な人との会話内容や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。"
           />
           <FeatureCard
