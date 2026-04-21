@@ -10,10 +10,6 @@ const DEFAULT_PUSH_NOTIFICATION_PATH = "/home";
 type PushConfigResponse = {
   vapidKey?: string;
   error?: string;
-  hasNextPublicKey?: boolean;
-  hasServerOnlyKey?: boolean;
-  vercelEnv?: string;
-  vercelUrl?: string;
 };
 
 let pushConfigPromise: Promise<string> | null = null;
@@ -52,11 +48,7 @@ async function getPushNotificationVapidKey() {
         const payload = (await response.json().catch(() => ({}))) as PushConfigResponse;
 
         if (!response.ok || !payload.vapidKey) {
-          throw new Error(
-            payload.error
-              ? `プッシュ通知設定を取得できませんでした。env=${payload.vercelEnv || "unknown"} nextPublic=${String(payload.hasNextPublicKey)} serverOnly=${String(payload.hasServerOnlyKey)}`
-              : "プッシュ通知設定の取得に失敗しました。",
-          );
+          throw new Error("プッシュ通知設定を取得できませんでした。");
         }
 
         cachedPushConfigVapidKey = payload.vapidKey;

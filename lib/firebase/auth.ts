@@ -30,16 +30,6 @@ import {
 import { deleteObject, listAll, ref } from "firebase/storage";
 import { firebaseAuth, firestore, getFirebaseConfigError, storage } from "./client";
 
-const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
-
-function getUserRole(email?: string | null) {
-  if (!email) {
-    return "user";
-  }
-
-  return ADMIN_EMAILS.has(email.toLowerCase()) ? "admin" : "user";
-}
-
 function ensureFirebaseAuth() {
   if (!firebaseAuth || !firestore) {
     throw new Error(getFirebaseConfigError());
@@ -61,7 +51,6 @@ function buildInitialUserDocumentPayload(user: User) {
       updatedAt: serverTimestamp(),
     },
     planId: "standard",
-    role: getUserRole(user.email),
     subscriptionStatus: "free",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -71,7 +60,6 @@ function buildInitialUserDocumentPayload(user: User) {
 function buildSyncedUserDocumentPayload(user: User) {
   return {
     email: user.email ?? "",
-    role: getUserRole(user.email),
     updatedAt: serverTimestamp(),
   };
 }

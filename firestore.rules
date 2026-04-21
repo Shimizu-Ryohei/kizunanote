@@ -10,12 +10,8 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    function isAdminEmail(email) {
-      return email is string && email.lower() == "space.odyssey.g@gmail.com";
-    }
-
-    function expectedUserRole() {
-      return isAdminEmail(request.auth.token.email) ? "admin" : "user";
+    function hasAdminClaim() {
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
     function profileOwner(profileId) {
@@ -29,15 +25,15 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(["role"])
         && request.resource.data.planId == "standard"
         && request.resource.data.subscriptionStatus == "free"
-        && request.resource.data.notificationEnabled == false
-        && request.resource.data.role == expectedUserRole();
+        && request.resource.data.notificationEnabled == false;
       allow update: if isOwner(uid)
         && request.resource.data.planId == resource.data.planId
         && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.role == expectedUserRole();
+        && request.resource.data.role == resource.data.role;
       allow delete: if isOwner(uid);
 
       match /billingEvents/{eventId} {

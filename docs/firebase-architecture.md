@@ -44,7 +44,7 @@ Shape:
 type UserDoc = {
   email: string;
   displayName: string;
-  role?: "user" | "admin";
+  role?: "user" | "admin"; // legacy migration field, admin authority is moving to Custom Claims
   notificationEnabled: boolean;
   notificationPreferences: {
     pushEnabled: boolean;

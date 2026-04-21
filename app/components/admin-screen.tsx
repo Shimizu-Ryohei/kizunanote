@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./auth-provider";
 import MobileShell from "./mobile-shell";
 import {
+  ensureCurrentUserAdminRole,
   getAdminContactInquiries,
   getAdminDashboardStats,
   type AdminContactInquiry,
-  getCurrentUserRole,
   type AdminDashboardStats,
 } from "@/lib/firebase/admin";
 
@@ -43,7 +43,7 @@ export default function AdminScreen() {
 
     let isMounted = true;
 
-    getCurrentUserRole(user.uid, user.email)
+    ensureCurrentUserAdminRole()
       .then((role) => {
         if (!isMounted) {
           return;

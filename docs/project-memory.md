@@ -115,9 +115,9 @@
 
 ## Admin Auth Note
 
-- 管理者メールのハードコードが複数箇所にある
-- 将来的には Firebase Custom Claims に寄せるのが望ましい
-- env だけへの集約では Firestore Rules の本質的解決にならない
+- 管理者判定は Firebase Custom Claims (`admin: true`) を正本にする
+- 既存の `users/{uid}.role == "admin"` は `bootstrapAdminClaims` で Claims に移行するための互換レイヤー
+- Firestore Rules ではクライアントから `role` を新規作成できず、既存値も変更できない
 
 ## Useful Checks
 

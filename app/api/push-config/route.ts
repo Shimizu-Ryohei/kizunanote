@@ -10,14 +10,15 @@ export async function GET() {
     "";
 
   if (!vapidKey) {
+    console.error("[push-config] VAPID key is not configured.", {
+      hasNextPublicKey: Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY),
+      hasServerOnlyKey: Boolean(process.env.FIREBASE_VAPID_KEY),
+      vercelEnv: process.env.VERCEL_ENV ?? "",
+      vercelUrl: process.env.VERCEL_URL ?? "",
+    });
+
     return NextResponse.json(
-      {
-        error: "NEXT_PUBLIC_FIREBASE_VAPID_KEY is not configured.",
-        hasNextPublicKey: Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY),
-        hasServerOnlyKey: Boolean(process.env.FIREBASE_VAPID_KEY),
-        vercelEnv: process.env.VERCEL_ENV ?? "",
-        vercelUrl: process.env.VERCEL_URL ?? "",
-      },
+      { error: "プッシュ通知設定を取得できませんでした。" },
       {
         status: 500,
         headers: {
@@ -28,10 +29,7 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    {
-      vapidKey,
-      vercelEnv: process.env.VERCEL_ENV ?? "",
-    },
+    { vapidKey },
     {
       headers: {
         "Cache-Control": "no-store, max-age=0",

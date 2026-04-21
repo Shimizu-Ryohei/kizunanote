@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { defineSecret } from "firebase-functions/params";
@@ -12,11 +13,11 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 initializeApp();
 
 const db = getFirestore();
+const auth = getAuth();
 const OPENAI_SUMMARY_MODEL = process.env.OPENAI_SUMMARY_MODEL || "gpt-4o-mini";
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 const MAX_UPDATED_NOTES = 50;
 const MAX_NOTE_BODY_LENGTH = 1200;
-const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
 const COMPANY_CRAWL_MAX_PAGES = 8;
 const COMPANY_CRAWL_PAGE_TIMEOUT_MS = 15000;
 const COMPANY_CRAWL_MAX_REDIRECTS = 3;
@@ -102,6 +103,41 @@ function getJstMonthDayKey(date) {
 
 function getNotificationTokenDocId(token) {
   return encodeURIComponent(token);
+}
+
+function hasAdminClaim(request) {
+  return request.auth?.token?.admin === true;
+}
+
+async function bootstrapAdminClaimForUid(uid) {
+  const userSnapshot = await db.doc(`users/${uid}`).get();
+  const userData = userSnapshot.exists ? userSnapshot.data() : null;
+
+  if (userData?.role !== "admin") {
+    return false;
+  }
+
+  const userRecord = await auth.getUser(uid);
+  const existingClaims = userRecord.customClaims || {};
+
+  if (existingClaims.admin === true) {
+    return true;
+  }
+
+  await auth.setCustomUserClaims(uid, {
+    ...existingClaims,
+    admin: true,
+  });
+
+  await userSnapshot.ref.set(
+    {
+      adminClaimMigratedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return true;
 }
 
 async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
@@ -1273,6 +1309,31 @@ export const summarizeProfileNow = onCall(
   }
 );
 
+export const bootstrapAdminClaims = onCall(
+  {
+    region: "asia-northeast1",
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "ログインが必要です。");
+    }
+
+    if (hasAdminClaim(request)) {
+      return { admin: true };
+    }
+
+    const migrated = await bootstrapAdminClaimForUid(uid);
+
+    if (!migrated) {
+      throw new HttpsError("permission-denied", "管理者のみアクセスできます。");
+    }
+
+    return { admin: true };
+  },
+);
+
 export const sendBirthdayPushNotifications = onSchedule(
   {
     schedule: BIRTHDAY_PUSH_SCHEDULE,
@@ -1369,17 +1430,12 @@ export const getAdminDashboardStats = onCall(
   },
   async (request) => {
     const uid = request.auth?.uid;
-    const email = request.auth?.token?.email;
 
     if (!uid) {
       throw new HttpsError("unauthenticated", "ログインが必要です。");
     }
 
-    const userSnapshot = await db.doc(`users/${uid}`).get();
-    const userData = userSnapshot.exists ? userSnapshot.data() : {};
-    const isAdmin = userData?.role === "admin" || (email && ADMIN_EMAILS.has(email.toLowerCase()));
-
-    if (!isAdmin) {
+    if (!hasAdminClaim(request)) {
       throw new HttpsError("permission-denied", "管理者のみアクセスできます。");
     }
 
@@ -1477,17 +1533,12 @@ export const getAdminContactInquiries = onCall(
   },
   async (request) => {
     const uid = request.auth?.uid;
-    const email = request.auth?.token?.email;
 
     if (!uid) {
       throw new HttpsError("unauthenticated", "ログインが必要です。");
     }
 
-    const userSnapshot = await db.doc(`users/${uid}`).get();
-    const userData = userSnapshot.exists ? userSnapshot.data() : {};
-    const isAdmin = userData?.role === "admin" || (email && ADMIN_EMAILS.has(email.toLowerCase()));
-
-    if (!isAdmin) {
+    if (!hasAdminClaim(request)) {
       throw new HttpsError("permission-denied", "管理者のみアクセスできます。");
     }
 

@@ -1,12 +1,6 @@
-import { doc, getDocFromServer } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import {
-  firebaseFunctions,
-  firestore,
-  getFirebaseConfigError,
-} from "./client";
-
-const ADMIN_EMAILS = new Set(["space.odyssey.g@gmail.com"]);
+import { firebaseAuth, firebaseFunctions, getFirebaseConfigError } from "./client";
+import type { IdTokenResult } from "firebase/auth";
 
 export type UserRole = "admin" | "user";
 
@@ -30,22 +24,56 @@ export type AdminContactInquiry = {
   createdAtLabel: string;
 };
 
-export function isAdminEmail(email?: string | null) {
-  return Boolean(email && ADMIN_EMAILS.has(email.toLowerCase()));
+function getAdminRoleFromTokenResult(tokenResult: IdTokenResult | null): UserRole {
+  return tokenResult?.claims.admin === true ? "admin" : "user";
 }
 
-export async function getCurrentUserRole(uid: string, email?: string | null): Promise<UserRole> {
-  if (isAdminEmail(email)) {
-    return "admin";
-  }
-
-  if (!firestore) {
+export async function getCurrentUserRole(): Promise<UserRole> {
+  if (!firebaseAuth) {
     throw new Error(getFirebaseConfigError());
   }
 
-  const snapshot = await getDocFromServer(doc(firestore, "users", uid));
-  const data = snapshot.data() as { role?: string } | undefined;
-  return data?.role === "admin" ? "admin" : "user";
+  const user = firebaseAuth.currentUser;
+
+  if (!user) {
+    return "user";
+  }
+
+  const tokenResult = await user.getIdTokenResult();
+  return getAdminRoleFromTokenResult(tokenResult);
+}
+
+export async function ensureCurrentUserAdminRole(): Promise<UserRole> {
+  if (!firebaseAuth || !firebaseFunctions) {
+    throw new Error(getFirebaseConfigError());
+  }
+
+  const user = firebaseAuth.currentUser;
+
+  if (!user) {
+    return "user";
+  }
+
+  const initialTokenResult = await user.getIdTokenResult();
+
+  if (getAdminRoleFromTokenResult(initialTokenResult) === "admin") {
+    return "admin";
+  }
+
+  const callable = httpsCallable<undefined, { admin: boolean }>(
+    firebaseFunctions,
+    "bootstrapAdminClaims",
+  );
+
+  try {
+    await callable();
+  } catch {
+    return "user";
+  }
+
+  await user.getIdToken(true);
+  const refreshedTokenResult = await user.getIdTokenResult(true);
+  return getAdminRoleFromTokenResult(refreshedTokenResult);
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
