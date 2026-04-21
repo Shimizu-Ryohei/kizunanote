@@ -18,6 +18,8 @@ const OPENAI_SUMMARY_MODEL = process.env.OPENAI_SUMMARY_MODEL || "gpt-4o-mini";
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 const MAX_UPDATED_NOTES = 50;
 const MAX_NOTE_BODY_LENGTH = 1200;
+const MANUAL_SUMMARY_DAILY_LIMIT = 50;
+const MANUAL_SUMMARY_COOLDOWN_MS = 2 * 60 * 1000;
 const COMPANY_CRAWL_MAX_PAGES = 8;
 const COMPANY_CRAWL_PAGE_TIMEOUT_MS = 15000;
 const COMPANY_CRAWL_MAX_REDIRECTS = 3;
@@ -101,6 +103,11 @@ function getJstMonthDayKey(date) {
   return `${month}-${day}`;
 }
 
+function getJstDateKey(date) {
+  const { year, month, day } = getJstDateParts(date);
+  return `${year}-${month}-${day}`;
+}
+
 function getNotificationTokenDocId(token) {
   return encodeURIComponent(token);
 }
@@ -138,6 +145,48 @@ async function bootstrapAdminClaimForUid(uid) {
   );
 
   return true;
+}
+
+async function enforceManualSummaryQuota(uid) {
+  const usageRef = db.doc(`users/${uid}/usage/manualSummary`);
+  const now = new Date();
+  const todayKey = getJstDateKey(now);
+
+  await db.runTransaction(async (transaction) => {
+    const usageSnapshot = await transaction.get(usageRef);
+    const usageData = usageSnapshot.exists ? usageSnapshot.data() : {};
+    const lastTriggeredAt = usageData?.lastTriggeredAt?.toDate?.() ?? null;
+    const usageDateKey = typeof usageData?.dateKey === "string" ? usageData.dateKey : "";
+    const usageCount =
+      usageDateKey === todayKey && typeof usageData?.count === "number"
+        ? usageData.count
+        : 0;
+
+    if (lastTriggeredAt && now.getTime() - lastTriggeredAt.getTime() < MANUAL_SUMMARY_COOLDOWN_MS) {
+      throw new HttpsError(
+        "failed-precondition",
+        "短時間での連続実行はできません。2分ほど待ってから再度お試しください。",
+      );
+    }
+
+    if (usageCount >= MANUAL_SUMMARY_DAILY_LIMIT) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "本日の手動要約の上限に達しました。明日になってから再度お試しください。",
+      );
+    }
+
+    transaction.set(
+      usageRef,
+      {
+        dateKey: todayKey,
+        count: usageCount + 1,
+        lastTriggeredAt: now,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+  });
 }
 
 async function sendBirthdayPushNotificationsForUser(ownerUid, notifications) {
@@ -1299,10 +1348,24 @@ export const summarizeProfileNow = onCall(
       throw new HttpsError("permission-denied", "このプロフィールを要約する権限がありません。");
     }
 
+    const userSnapshot = await db.doc(`users/${uid}`).get();
+    const userData = userSnapshot.exists ? userSnapshot.data() : null;
+    const planId = typeof userData?.planId === "string" ? userData.planId.trim().toLowerCase() : "";
+
+    if (planId !== "pro") {
+      throw new HttpsError("permission-denied", "Proプランで利用できる機能です。");
+    }
+
     const summaryStatus = String(profileData?.summaryStatus || "idle");
     if (summaryStatus === "processing") {
       return { status: "processing" };
     }
+
+    if (summaryStatus !== "pending" && summaryStatus !== "error") {
+      return { status: "already_latest" };
+    }
+
+    await enforceManualSummaryQuota(uid);
 
     const result = await runProfileSummary(profileSnapshot);
     return result;

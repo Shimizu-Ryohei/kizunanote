@@ -61,6 +61,9 @@
 ## Summary Rules
 
 - 要約生成は `functions/index.js` の OpenAI 呼び出しで実施
+- Pro の手動要約は `summarizeProfileNow` でサーバー側制限あり
+  - 1日50回まで
+  - 直前実行から2分クールダウン
 - 日本語の要約ルール:
   - `プロフィール本人` は使わない
   - 通常の説明では `本人は` のような主語を省く

@@ -424,7 +424,7 @@ export default function ProfileRecordDetailScreen({ profileId }: { profileId: st
     } catch (error) {
       console.error(error);
       setSummaryRefreshModalMode("closed");
-      setErrorMessage("要約の実行に失敗しました。");
+      setErrorMessage(error instanceof Error ? error.message : "要約の実行に失敗しました。");
     } finally {
       setIsSummaryRefreshing(false);
     }
