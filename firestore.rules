@@ -10,10 +10,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    function hasAdminClaim() {
-      return isSignedIn() && request.auth.token.admin == true;
-    }
-
     function profileOwner(profileId) {
       return get(/databases/$(database)/documents/profiles/$(profileId)).data.ownerUid;
     }

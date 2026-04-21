@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { firebaseAuth, firebaseFunctions, getFirebaseConfigError } from "./client";
+import { FirebaseError } from "firebase/app";
 import type { IdTokenResult } from "firebase/auth";
 
 export type UserRole = "admin" | "user";
@@ -27,6 +28,8 @@ export type AdminContactInquiry = {
 function getAdminRoleFromTokenResult(tokenResult: IdTokenResult | null): UserRole {
   return tokenResult?.claims.admin === true ? "admin" : "user";
 }
+
+let adminBootstrapPermissionDenied = false;
 
 export async function getCurrentUserRole(): Promise<UserRole> {
   if (!firebaseAuth) {
@@ -60,6 +63,10 @@ export async function ensureCurrentUserAdminRole(): Promise<UserRole> {
     return "admin";
   }
 
+  if (adminBootstrapPermissionDenied) {
+    return "user";
+  }
+
   const callable = httpsCallable<undefined, { admin: boolean }>(
     firebaseFunctions,
     "bootstrapAdminClaims",
@@ -67,11 +74,17 @@ export async function ensureCurrentUserAdminRole(): Promise<UserRole> {
 
   try {
     await callable();
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof FirebaseError &&
+      error.code === "functions/permission-denied"
+    ) {
+      adminBootstrapPermissionDenied = true;
+    }
+
     return "user";
   }
 
-  await user.getIdToken(true);
   const refreshedTokenResult = await user.getIdTokenResult(true);
   return getAdminRoleFromTokenResult(refreshedTokenResult);
 }
