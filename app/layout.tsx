@@ -5,6 +5,7 @@ import "@fontsource/noto-sans-jp/700.css";
 import "@fontsource/noto-sans-jp/900.css";
 import AuthGuard from "./components/auth-guard";
 import { AuthProvider } from "./components/auth-provider";
+import { GoogleAnalytics } from "./components/google-analytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ export default function RootLayout({
         <AuthProvider>
           <AuthGuard>{children}</AuthGuard>
         </AuthProvider>
+        <GoogleAnalytics />
       </body>
     </html>
   );
