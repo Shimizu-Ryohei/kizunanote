@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 declare global {
@@ -35,18 +35,16 @@ function sendPageView(url: string) {
 
 export function GoogleAnalytics() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!pathname || !GA_MEASUREMENT_ID) {
       return;
     }
 
-    const query = searchParams.toString();
-    const url = `${window.location.origin}${pathname}${query ? `?${query}` : ""}`;
+    const url = `${window.location.origin}${pathname}${window.location.search}`;
 
     sendPageView(url);
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   if (!GA_MEASUREMENT_ID) {
     return null;
