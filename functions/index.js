@@ -761,6 +761,8 @@ function cleanWorkplaceLabel(value) {
         ""
       )
       .replace(/[。．、,，\s]+$/u, "")
+      // Contextual extraction can leave a dangling particle like "同僚で".
+      .replace(/[はがをにでと]$/u, "")
       .trim();
 
   const corporateMatch = normalized.match(
