@@ -111,7 +111,37 @@ async function getServiceWorkerRegistration() {
     throw new Error("このブラウザでは Service Worker を利用できません。");
   }
 
-  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+  const serviceWorkerUrl = new URL("/firebase-messaging-sw.js", window.location.origin);
+  serviceWorkerUrl.searchParams.set(
+    "apiKey",
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
+  );
+  serviceWorkerUrl.searchParams.set(
+    "authDomain",
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+  );
+  serviceWorkerUrl.searchParams.set(
+    "projectId",
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+  );
+  serviceWorkerUrl.searchParams.set(
+    "storageBucket",
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
+  );
+  serviceWorkerUrl.searchParams.set(
+    "messagingSenderId",
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
+  );
+  serviceWorkerUrl.searchParams.set(
+    "appId",
+    process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
+  );
+  serviceWorkerUrl.searchParams.set(
+    "measurementId",
+    process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "",
+  );
+
+  const registration = await navigator.serviceWorker.register(serviceWorkerUrl.toString());
   const readyRegistration = await navigator.serviceWorker.ready;
   const activeWorker =
     readyRegistration.active ?? registration.active ?? registration.waiting ?? registration.installing ?? null;
