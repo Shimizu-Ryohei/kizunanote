@@ -51,12 +51,20 @@ export default function LandingPageScreen() {
             className="h-[22px] w-auto"
             priority
           />
-          <Link
-            href="/sign-up"
-            className="inline-flex h-[38px] items-center justify-center rounded-full bg-[var(--color-main)] px-4 text-[12px] font-black text-white"
-          >
-            新規登録する
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/sign-in"
+              className="inline-flex h-[34px] items-center justify-center rounded-full px-2 text-[11px] font-black text-[var(--color-main)]"
+            >
+              ログイン
+            </Link>
+            <Link
+              href="/sign-up"
+              className="inline-flex h-[34px] items-center justify-center rounded-full bg-[var(--color-main)] px-3 text-[11px] font-black text-white"
+            >
+              新規登録
+            </Link>
+          </div>
         </header>
 
         <section>
@@ -77,18 +85,12 @@ export default function LandingPageScreen() {
           >
             無料で新規登録する
           </Link>
-          <Link
-            href="/sign-in"
-            className="flex h-[52px] w-full items-center justify-center rounded-full border border-[#dce7ff] bg-white text-[14px] font-bold text-[var(--color-main)]"
-          >
-            ログイン
-          </Link>
         </section>
 
         <section className="mt-5 space-y-4 px-5">
           <FeatureCard
-            title="「この人の趣味なんだっけ…家族は…」できる経営者やトップ営業は全部覚えてる"
-            description="キズナノートに大切な人との会話内容や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。"
+            title="「この人の趣味なんだっけ…家族は…」できる経営者やトップ営業は全て覚えてる"
+            description="大切な人との会話や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。「覚えてくれている」ことで気持ちが動きます。"
           />
           <FeatureCard
             title="AIがキズナノートを要約"
