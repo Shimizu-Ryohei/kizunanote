@@ -16,7 +16,6 @@ import {
   getStoredPushNotificationToken,
   markPushNotificationTokenRefreshed,
   requestPushNotificationToken,
-  shouldRefreshPushNotificationToken,
   subscribeToForegroundPushNotifications,
 } from "@/lib/firebase/push-notifications";
 import {
@@ -71,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getNotificationSettings(user.uid)
       .then(async (settings) => {
-        if (cancelled || !settings.pushEnabled || !shouldRefreshPushNotificationToken()) {
+        if (cancelled || !settings.pushEnabled) {
           return;
         }
 
