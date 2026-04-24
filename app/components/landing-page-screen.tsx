@@ -150,6 +150,12 @@ export default function LandingPageScreen() {
             利用規約等
           </Link>
           <Link
+            href="/legal/commerce"
+            className="mx-auto mt-4 block w-fit text-[11px] font-medium leading-none text-[#8a8a8a] underline"
+          >
+            特定商取引法に基づく表記
+          </Link>
+          <Link
             href="/contact"
             className="mx-auto mt-4 block w-fit text-[11px] font-medium leading-none text-[#8a8a8a] underline"
           >

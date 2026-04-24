@@ -56,6 +56,7 @@ export default function SettingsScreen() {
             <SettingRow label="通知設定" href="/settings/notifications" />
             <SettingRow label="よくある質問" href="/settings/faq" />
             <SettingRow label="利用規約等" href="/settings/legal" />
+            <SettingRow label="特定商取引法に基づく表記" href="/legal/commerce" />
           </div>
         </section>
 

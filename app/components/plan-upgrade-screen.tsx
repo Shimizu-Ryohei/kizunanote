@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import MobileShell from "./mobile-shell";
 import { useAuth } from "./auth-provider";
@@ -161,6 +162,12 @@ export default function PlanUpgradeScreen() {
               ]}
             />
           </div>
+          <Link
+            href="/legal/commerce"
+            className="mx-auto mt-6 block w-fit text-[11px] font-medium leading-none text-[#8a8a8a] underline"
+          >
+            特定商取引法に基づく表記
+          </Link>
         </section>
       </main>
     </MobileShell>
