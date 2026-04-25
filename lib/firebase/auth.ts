@@ -75,16 +75,8 @@ export async function syncUserDocument(user: User) {
 }
 
 export async function signUpWithEmail(email: string, password: string) {
-  const { firebaseAuth, firestore } = ensureFirebaseAuth();
+  const { firebaseAuth } = ensureFirebaseAuth();
   const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
-  const user = credential.user;
-
-  await setDoc(
-    doc(firestore, "users", user.uid),
-    buildInitialUserDocumentPayload(user),
-    { merge: true },
-  );
-
   return credential;
 }
 
@@ -110,17 +102,11 @@ export async function completeSignUpWithEmailLink(
   password: string,
   emailLink: string,
 ) {
-  const { firebaseAuth, firestore } = ensureFirebaseAuth();
+  const { firebaseAuth } = ensureFirebaseAuth();
   const credential = await signInWithEmailLink(firebaseAuth, email, emailLink);
   const user = credential.user;
 
   await updatePassword(user, password);
-
-  await setDoc(
-    doc(firestore, "users", user.uid),
-    buildInitialUserDocumentPayload(user),
-    { merge: true },
-  );
 
   return credential;
 }
