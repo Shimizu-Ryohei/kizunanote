@@ -8,13 +8,11 @@ function PlanCard({
   price,
   description,
   features,
-  isUpcoming,
 }: {
   name: string;
   price: string;
   description?: string;
   features: string[];
-  isUpcoming?: boolean;
 }) {
   return (
     <section className="rounded-[18px] bg-white px-5 py-5 shadow-[0_1px_0_rgba(0,0,0,0.01)]">
@@ -22,11 +20,6 @@ function PlanCard({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-[18px] font-black text-[#202020]">{name}</h2>
-            {isUpcoming ? (
-              <span className="rounded-full bg-[#eef4ff] px-3 py-1 text-[10px] font-black text-[var(--color-main)]">
-                近日リリース予定
-              </span>
-            ) : null}
           </div>
           {description ? (
             <p className="mt-2 text-[12px] font-medium leading-5 text-[#6a6a6a]">{description}</p>
@@ -86,7 +79,6 @@ export default function PublicPricingScreen() {
               <PlanCard
                 name="Plus"
                 price="480円/月"
-                isUpcoming
                 description="Standardのすべての機能に加えて："
                 features={[
                   "無制限のプロフィール登録",
@@ -96,7 +88,6 @@ export default function PublicPricingScreen() {
               <PlanCard
                 name="Pro"
                 price="980円/月"
-                isUpcoming
                 description="Plusのすべての機能に加えて："
                 features={[
                   "即時の要約実行が可能",

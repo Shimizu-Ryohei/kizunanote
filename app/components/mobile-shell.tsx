@@ -156,12 +156,14 @@ export function BottomMenu() {
 }
 
 export default function MobileShell({ children }: MobileShellProps) {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-white sm:bg-[#dedede]">
       <div className="mx-auto min-h-screen max-w-[430px] overflow-hidden bg-[#f7f7f7] shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
         <AppHeader />
         <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 70px)" }}>{children}</div>
-        <BottomMenu />
+        {user ? <BottomMenu /> : null}
       </div>
     </div>
   );
