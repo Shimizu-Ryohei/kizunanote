@@ -45,11 +45,11 @@ export default function PublicPricingScreen() {
       <div className="mx-auto max-w-[430px]">
         <header className="flex h-[68px] items-center justify-between bg-white px-5">
           <Image
-            src="/brand/kizunanote-header.svg"
+            src="/brand/kizunanote-logotype.svg"
             alt="キズナノート"
             width={202}
             height={44}
-            className="h-[22px] w-auto"
+            className="h-11 w-auto"
             priority
           />
           <Link
