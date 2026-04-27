@@ -44,11 +44,11 @@ export default function LandingPageScreen() {
       <div className="mx-auto max-w-[430px]">
         <header className="flex h-[68px] items-center justify-between bg-white px-5">
           <Image
-            src="/brand/kizunanote-header.svg"
+            src="/brand/kizunanote-logotype.svg"
             alt="キズナノート"
             width={202}
             height={44}
-            className="h-[22px] w-auto"
+            className="h-11 w-auto"
             priority
           />
           <div className="flex items-center gap-2">
@@ -69,10 +69,10 @@ export default function LandingPageScreen() {
 
         <section>
           <Image
-            src="/brand/lp-hero-v2.png"
+            src="/brand/lp-hero-eyecatch.png"
             alt="キズナノートの利用イメージ"
             width={1366}
-            height={768}
+            height={1324}
             className="h-auto w-full"
             priority
           />
@@ -89,7 +89,7 @@ export default function LandingPageScreen() {
 
         <section className="mt-5 space-y-4 px-5">
           <FeatureCard
-            title="「この人の趣味なんだっけ…家族は…」できる経営者やトップ営業は全て覚えてる"
+            title="「上のお子さん、来年小学生ですね」たった一言で商談を決めた、トップ営業のノート術"
             description="大切な人との会話や趣味、家族情報などを記録しておくことで、次に会うときのきっかけや自然な話題づくりに役立ちます。「覚えてくれている」ことで気持ちが動きます。"
           />
           <FeatureCard
