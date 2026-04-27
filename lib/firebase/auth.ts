@@ -200,6 +200,7 @@ async function deleteStorageFolder(path: string) {
 }
 
 async function cancelStripeSubscription(idToken: string) {
+  // アカウント削除専用。通常のプランキャンセルは Customer Portal 経由で行う。
   const response = await fetch("/api/stripe/cancel-subscription", {
     method: "POST",
     headers: {

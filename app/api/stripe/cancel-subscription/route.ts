@@ -5,6 +5,7 @@ import { getStripe } from "@/lib/stripe/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// アカウント削除専用。通常のプランキャンセルは Customer Portal 経由で行う。
 export async function POST(request: Request) {
   try {
     const decodedToken = await verifyBearerToken(request);

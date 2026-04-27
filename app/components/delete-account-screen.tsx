@@ -21,7 +21,9 @@ export default function DeleteAccountScreen() {
       router.replace("/sign-up");
     } catch (error) {
       console.error(error);
-      setErrorMessage("アカウント削除に失敗しました。パスワードを確認して再度お試しください。");
+      setErrorMessage(
+        "アカウント削除に失敗しました。パスワードを確認して再度お試しください。解決しない場合はお問い合わせください。",
+      );
       setIsConfirmOpen(false);
     } finally {
       setIsSubmitting(false);

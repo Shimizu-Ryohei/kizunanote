@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   increment,
@@ -379,8 +380,10 @@ export async function countProfilesByOwner(ownerUid: string) {
   }
 
   const db = firestore;
-  const snapshot = await getDocs(query(collection(db, "profiles"), where("ownerUid", "==", ownerUid)));
-  return snapshot.size;
+  const snapshot = await getCountFromServer(
+    query(collection(db, "profiles"), where("ownerUid", "==", ownerUid)),
+  );
+  return snapshot.data().count;
 }
 
 export async function getProfileDetailById(profileId: string, ownerUid: string) {
