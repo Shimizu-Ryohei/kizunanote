@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src: "/brand/kizunanote-icon.png",
-        sizes: "480x380",
+        sizes: "512x512",
         type: "image/png",
       },
     ],
