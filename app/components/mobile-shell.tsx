@@ -44,11 +44,11 @@ function SettingsIcon() {
 export function AppHeader() {
   return (
     <header
-      className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[430px] bg-white/95 px-7 pb-3 backdrop-blur"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
+      className="fixed inset-x-0 top-0 z-30 mx-auto max-w-[430px] bg-white/95 px-7 pb-1.25 backdrop-blur"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 5px)" }}
     >
       <Link href="/home" aria-label="キズナノート" className="inline-block">
-        <Image src="/brand/kizunanote-header.svg" alt="キズナノート" width={202} height={44} className="h-[22px] w-auto" priority />
+        <Image src="/brand/kizunanote-logotype.svg" alt="キズナノート" width={202} height={44} className="h-11 w-auto" priority />
       </Link>
     </header>
   );

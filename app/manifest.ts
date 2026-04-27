@@ -11,8 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#ffffff",
     icons: [
       {
-        src: "/brand/kizunanote-home.png",
-        sizes: "2000x2000",
+        src: "/brand/kizunanote-icon.png",
+        sizes: "480x380",
         type: "image/png",
       },
     ],

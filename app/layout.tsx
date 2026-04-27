@@ -12,8 +12,9 @@ export const metadata: Metadata = {
   title: "キズナノート",
   description: "大切なつながりを記録するキュレーションノート",
   icons: {
-    icon: "/brand/kizunanote-favicon.svg",
-    shortcut: "/brand/kizunanote-favicon.svg",
+    icon: "/brand/kizunanote-icon.png",
+    shortcut: "/brand/kizunanote-icon.png",
+    apple: "/brand/kizunanote-icon.png",
   },
 };
 
