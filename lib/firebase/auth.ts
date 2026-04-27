@@ -199,6 +199,19 @@ async function deleteStorageFolder(path: string) {
   await Promise.all(listed.prefixes.map((prefix) => deleteStorageFolder(prefix.fullPath)));
 }
 
+async function cancelStripeSubscription(idToken: string) {
+  const response = await fetch("/api/stripe/cancel-subscription", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("サブスクリプションの解約に失敗しました。");
+  }
+}
+
 export async function deleteCurrentUserAccount(password: string) {
   const { firebaseAuth, firestore } = ensureFirebaseAuth();
   const user = firebaseAuth.currentUser;
@@ -208,6 +221,7 @@ export async function deleteCurrentUserAccount(password: string) {
   }
 
   await reauthenticateCurrentUser(password);
+  await cancelStripeSubscription(await user.getIdToken());
 
   await addDoc(collection(firestore, "users", user.uid, "billingEvents"), {
     type: "account_deleted",

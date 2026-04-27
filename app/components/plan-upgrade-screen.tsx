@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import MobileShell from "./mobile-shell";
 import { useAuth } from "./auth-provider";
-import { getCurrentPlan, getPlanLabel, type PlanId } from "@/lib/firebase/subscription";
+import {
+  getCurrentSubscription,
+  getPlanLabel,
+  type PlanId,
+  type SubscriptionStatus,
+} from "@/lib/firebase/subscription";
 
 function PlanCard({
   name,
@@ -13,6 +18,9 @@ function PlanCard({
   features,
   isCurrent,
   ctaLabel,
+  ctaDisabled,
+  onCtaClick,
+  ctaTone = "secondary",
 }: {
   name: string;
   price: string;
@@ -20,9 +28,11 @@ function PlanCard({
   features: string[];
   isCurrent?: boolean;
   ctaLabel?: string;
+  ctaDisabled?: boolean;
+  onCtaClick?: () => void;
+  ctaTone?: "primary" | "secondary";
 }) {
-  const isUpgradeCta = ctaLabel?.includes("アップグレード") ?? false;
-  const ctaClassName = isUpgradeCta
+  const ctaClassName = ctaTone === "primary"
     ? "bg-[var(--color-main)] text-white font-black"
     : "bg-[var(--color-sub)] text-[var(--color-main)] font-bold";
 
@@ -55,8 +65,11 @@ function PlanCard({
       {ctaLabel ? (
         <button
           type="button"
-          disabled
-          className={`mt-5 flex h-[44px] w-full items-center justify-center rounded-full text-[13px] ${ctaClassName}`}
+          disabled={ctaDisabled}
+          onClick={onCtaClick}
+          className={`mt-5 flex h-[44px] w-full items-center justify-center rounded-full text-[13px] ${ctaClassName} ${
+            ctaDisabled ? "opacity-60" : ""
+          }`}
         >
           {ctaLabel}
         </button>
@@ -68,7 +81,12 @@ function PlanCard({
 export default function PlanUpgradeScreen() {
   const { user } = useAuth();
   const [currentPlan, setCurrentPlan] = useState<PlanId>("standard");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>("free");
+  const [stripeCancelAtPeriodEnd, setStripeCancelAtPeriodEnd] = useState(false);
+  const [stripeCurrentPeriodEnd, setStripeCurrentPeriodEnd] = useState<Date | null>(null);
+  const [stripeCancelAt, setStripeCancelAt] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [processingCta, setProcessingCta] = useState<PlanId | "">("");
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -78,13 +96,17 @@ export default function PlanUpgradeScreen() {
 
     let isMounted = true;
 
-    getCurrentPlan(user.uid)
-      .then((planId) => {
+    getCurrentSubscription(user.uid)
+      .then((subscription) => {
         if (!isMounted) {
           return;
         }
 
-        setCurrentPlan(planId);
+        setCurrentPlan(subscription.effectivePlanId);
+        setSubscriptionStatus(subscription.subscriptionStatus);
+        setStripeCancelAtPeriodEnd(subscription.stripeCancelAtPeriodEnd);
+        setStripeCurrentPeriodEnd(subscription.stripeCurrentPeriodEnd);
+        setStripeCancelAt(subscription.stripeCancelAt);
         setErrorMessage("");
       })
       .catch((error) => {
@@ -107,6 +129,116 @@ export default function PlanUpgradeScreen() {
     };
   }, [user]);
 
+  const redirectToStripe = async (path: string, body?: { planId: PlanId }) => {
+    if (!user) {
+      setErrorMessage("ログイン状態を確認できませんでした。");
+      return;
+    }
+
+    setErrorMessage("");
+
+    const idToken = await user.getIdToken();
+    const response = await fetch(path, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = (await response.json()) as { url?: string; error?: string };
+
+    if (!response.ok || !data.url) {
+      throw new Error(data.error ?? "Stripeページを開けませんでした。");
+    }
+
+    window.location.href = data.url;
+  };
+
+  const handleCheckout = async (planId: Exclude<PlanId, "standard">) => {
+    if (processingCta) {
+      return;
+    }
+
+    try {
+      setProcessingCta(planId);
+      await redirectToStripe("/api/stripe/checkout", { planId });
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("決済ページを開けませんでした。時間をおいて再度お試しください。");
+      setProcessingCta("");
+    }
+  };
+
+  const handlePortal = async (ctaId: PlanId) => {
+    if (processingCta) {
+      return;
+    }
+
+    try {
+      setProcessingCta(ctaId);
+      await redirectToStripe("/api/stripe/portal");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("請求管理ページを開けませんでした。時間をおいて再度お試しください。");
+      setProcessingCta("");
+    }
+  };
+
+  const shouldUsePortal = currentPlan === "plus" || currentPlan === "pro";
+  const cancellationDate =
+    stripeCancelAt
+      ? stripeCancelAt
+      : stripeCancelAtPeriodEnd
+        ? stripeCurrentPeriodEnd
+        : null;
+  const isCancellationScheduled = Boolean(cancellationDate && currentPlan !== "standard");
+  const standardCtaLabel =
+    isCancellationScheduled
+      ? undefined
+      : currentPlan === "pro"
+      ? "Proプランをキャンセルする"
+      : currentPlan === "plus"
+        ? "Plusプランをキャンセルする"
+        : undefined;
+  const plusCtaLabel =
+    isCancellationScheduled && currentPlan === "plus"
+      ? "Plusプランを再開する"
+      : currentPlan === "pro"
+      ? "Plusプランへダウングレードする"
+      : currentPlan === "plus"
+        ? undefined
+        : "アップグレードする";
+  const proCtaLabel =
+    isCancellationScheduled && currentPlan === "pro"
+      ? "Proプランを再開する"
+      : currentPlan === "pro"
+      ? undefined
+      : currentPlan === "plus"
+        ? "Proプランへアップグレードする"
+        : "アップグレードする";
+  const plusCtaTone = isCancellationScheduled && currentPlan === "plus"
+    ? "primary"
+    : currentPlan === "pro"
+      ? "secondary"
+      : "primary";
+  const proCtaTone = isCancellationScheduled && currentPlan === "pro"
+    ? "primary"
+    : currentPlan === "plus" || currentPlan === "standard"
+      ? "primary"
+      : "secondary";
+  const formattedCancellationDate = cancellationDate
+    ? new Intl.DateTimeFormat("ja-JP", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(cancellationDate)
+    : "";
+  const cancellationMessage =
+    formattedCancellationDate && currentPlan !== "standard"
+      ? `キャンセル済み。${formattedCancellationDate}まで${getPlanLabel(currentPlan)}をご利用いただけます。`
+      : "";
+
   return (
     <MobileShell>
       <main className="px-4 pb-28">
@@ -119,6 +251,16 @@ export default function PlanUpgradeScreen() {
             {errorMessage ? (
               <p className="mt-2 text-[12px] font-medium text-[#d64253]">{errorMessage}</p>
             ) : null}
+            {subscriptionStatus === "past_due" ? (
+              <p className="mt-2 text-[12px] font-medium text-[#d64253]">
+                お支払いを確認できないため、現在はStandardとして扱われています。
+              </p>
+            ) : null}
+            {cancellationMessage ? (
+              <p className="mt-2 text-[12px] font-medium leading-5 text-[#6a6a6a]">
+                {cancellationMessage}
+              </p>
+            ) : null}
           </div>
           <p className="text-[13px] font-medium leading-6 text-[#7a7a7a]">
             利用スタイルに合わせて、キズナを積み上げるためのプランを選べます。
@@ -128,11 +270,9 @@ export default function PlanUpgradeScreen() {
               name="Standard"
               price="無料"
               isCurrent={currentPlan === "standard"}
-              ctaLabel={
-                currentPlan === "plus" || currentPlan === "pro"
-                  ? "Standardにダウングレードする"
-                  : undefined
-              }
+              ctaLabel={standardCtaLabel}
+              ctaDisabled={processingCta === "standard"}
+              onCtaClick={() => handlePortal("standard")}
               features={[
                 "20名までのプロフィール登録",
                 "無制限のキズナノート要約（毎日要約が実行されます）",
@@ -143,7 +283,10 @@ export default function PlanUpgradeScreen() {
               name="Plus"
               price="480円/月"
               isCurrent={currentPlan === "plus"}
-              ctaLabel="近日リリース予定です"
+              ctaLabel={plusCtaLabel}
+              ctaTone={plusCtaTone}
+              ctaDisabled={processingCta === "plus"}
+              onCtaClick={shouldUsePortal ? () => handlePortal("plus") : () => handleCheckout("plus")}
               description="Standardのすべての機能に加えて："
               features={[
                 "無制限のプロフィール登録",
@@ -154,7 +297,10 @@ export default function PlanUpgradeScreen() {
               name="Pro"
               price="980円/月"
               isCurrent={currentPlan === "pro"}
-              ctaLabel="近日リリース予定です"
+              ctaLabel={proCtaLabel}
+              ctaTone={proCtaTone}
+              ctaDisabled={processingCta === "pro"}
+              onCtaClick={shouldUsePortal ? () => handlePortal("pro") : () => handleCheckout("pro")}
               description="Plusのすべての機能に加えて："
               features={[
                 "即時の要約実行が可能",
